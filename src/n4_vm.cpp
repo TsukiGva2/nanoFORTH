@@ -28,6 +28,7 @@ using namespace N4Core;                             /// * VM built with core uni
 #define POP()          (*vm.sp++)                   /**< pop value off parameter stack       */
 #define RPUSH(a)       (*(vm.rp++)=(U16)(a))        /**< push address onto return stack      */
 #define RPOP()         (*(--vm.rp))                 /**< pop address from return stack       */
+#define BOOL(f)        ((f) ? -1 : 0)               /**< TRUE=-1 per common Forth idiom      */
 ///@}
 ///@name Dictionary Index <=> Pointer Converters
 ///@{
@@ -40,7 +41,7 @@ namespace N4VM {
 ///
 void _nest(U16 xt);                      /// * forward declaration
 void _init() {
-    show(APP_NAME); show(APP_VERSION);   /// * show init prompt
+    show(APP_NAME);                      /// * show init prompt
 
     vm.rp = (U16*)DIC(N4_DIC_SZ);        /// * reset return stack pointer
     vm.sp = SP0;                         /// * reset data stack pointer
@@ -61,13 +62,13 @@ void _dump(U16 p0, U16 sz0)
     U8  *p = DIC(p0 & 0xffe0);
     U16 sz = (sz0 + 0x1f) & 0xffe0;
     for (U16 i=0; i<sz; i+=DUMP_PER_LINE) {
-        d_chr('\n');
         d_mem(dic, p, DUMP_PER_LINE, ' ');
         d_chr(' ');
         for (U8 j=0; j<DUMP_PER_LINE; j++, p++) {         // print and advance to next byte
             char c = *p & 0x7f;
             d_chr((c==0x7f||c<0x20) ? '_' : c);
         }
+        d_chr('\n');
     }
 }
 ///
@@ -183,11 +184,11 @@ void _invoke(U8 op)
     _X(14, TOS ^= POP());           // XOR
     _X(15, TOS ^= -1);              // NOT
     _X(16, TOS <<= POP());          // LSH
-    _X(17, TOS >>= POP());          // RSH
-    _X(18, TOS = POP()==TOS);       // =
-    _X(19, TOS = POP()> TOS);       // <
-    _X(20, TOS = POP()< TOS);       // >
-    _X(21, TOS = POP()!=TOS);       // <>
+    _X(17, U16 n = POP(); TOS = (U16)TOS >> n);  // RSH
+    _X(18, TOS = BOOL(POP()==TOS)); // =
+    _X(19, TOS = BOOL(POP()> TOS)); // <
+    _X(20, TOS = BOOL(POP()< TOS)); // >
+    _X(21, TOS = BOOL(POP()!=TOS)); // <>
     _X(22, U8 *p = DIC(POP()); PUSH(GET16(p)) ); // @
     _X(23, U8 *p = DIC(POP()); ENC16(p, POP())); // !
     _X(24, U8 *p = DIC(POP()); PUSH((U16)*p)  ); // C@
@@ -207,7 +208,7 @@ void _invoke(U8 op)
     _X(38, _dplus());               // D+
     _X(39, _dminus());              // D-
     _X(40, _dneg());                // DNG
-    _X(41, TOS = abs(TOS));         // ABS
+    _X(41, TOS = TOS > 0 ? TOS : -TOS);           // ABS
     _X(42, S16 n = POP(); TOS = n>TOS ? n : TOS); // MAX
     _X(43, S16 n = POP(); TOS = n<TOS ? n : TOS); // MIN
     _X(44, NanoForth::wait((U32)POP()));          // DLY
