@@ -10,7 +10,7 @@ FPTR NanoForth::fp[] = { NULL };
 ///
 ///> add new (user defined) hardware task to linked-list
 ///
-void NanoForth::add_api(int i, FPTR ufunc)
+void NanoForth::add_api(U16 i, FPTR ufunc)
 {
 	if (i <= N4_API_SZ) fp[i] = ufunc;
 }

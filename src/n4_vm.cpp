@@ -21,33 +21,33 @@ using namespace N4Core;                             /// * VM built with core uni
 ///
 ///@name Data Stack and Return Stack Ops
 ///@{
-#define SP0            ((S16*)&dic[N4_DIC_SZ + N4_STK_SZ])
+#define SP0            ((DU*)&dic[N4_DIC_SZ + N4_STK_SZ])
 #define TOS            (*vm.sp)                     /**< pointer to top of current stack     */
 #define SS(i)          (*(vm.sp+(i)))               /**< pointer to the nth on stack         */
-#define PUSH(v)        (*(--vm.sp)=(S16)(v))        /**< push v onto parameter stack         */
+#define PUSH(v)        (*(--vm.sp)=(DU)(v))         /**< push v onto parameter stack         */
 #define POP()          (*vm.sp++)                   /**< pop value off parameter stack       */
-#define RPUSH(a)       (*(vm.rp++)=(U16)(a))        /**< push address onto return stack      */
+#define RPUSH(a)       (*(vm.rp++)=(IU)(a))         /**< push address onto return stack      */
 #define RPOP()         (*(--vm.rp))                 /**< pop address from return stack       */
 #define BOOL(f)        ((f) ? -1 : 0)               /**< TRUE=-1 per common Forth idiom      */
 ///@}
 ///@name Dictionary Index <=> Pointer Converters
 ///@{
 #define DIC(n)         ((U8*)dic + (n))             /**< convert dictionary index to a memory pointer */
-#define IDX(p)         ((U16)((U8*)(p) - dic))      /**< convert memory pointer to a dictionary index */
+#define IDX(p)         ((IU)((U8*)(p) - dic))       /**< convert memory pointer to a dictionary index */
 ///@}
 namespace N4VM {
 ///
 ///> reset virtual machine
 ///
-void _nest(U16 xt);                      /// * forward declaration
+void _nest(IU xt);                       /// * forward declaration
 void _init() {
     show(APP_NAME);                      /// * show init prompt
 
-    vm.rp = (U16*)DIC(N4_DIC_SZ);        /// * reset return stack pointer
+    vm.rp = (IU*)DIC(N4_DIC_SZ);         /// * reset return stack pointer
     vm.sp = SP0;                         /// * reset data stack pointer
     N4Intr::reset();                     /// * init interrupt handler
 
-    U16 xt = N4Asm::reset();             /// * reload EEPROM and reset assembler
+    IU xt = N4Asm::reset();              /// * reload EEPROM and reset assembler
     if (xt != LFA_END) {                 /// * check autorun addr has been setup? (see SEX)
         show("reset\n");
         _nest(xt + 2 + 3);               /// * execute last saved colon word in EEPROM
@@ -57,14 +57,14 @@ void _init() {
 ///> show a section of memory in Forth dump format
 ///
 #define DUMP_PER_LINE 0x10
-void _dump(U16 p0, U16 sz0)
+void _dump(IU p0, U16 sz0)
 {
     U8  *p = DIC(p0 & 0xffe0);
     U16 sz = (sz0 + 0x1f) & 0xffe0;
     for (U16 i=0; i<sz; i+=DUMP_PER_LINE) {
         d_mem(dic, p, DUMP_PER_LINE, ' ');
         d_chr(' ');
-        for (U8 j=0; j<DUMP_PER_LINE; j++, p++) {         // print and advance to next byte
+        for (int j=0; j<DUMP_PER_LINE; j++, p++) {    // print and advance to next byte
             char c = *p & 0x7f;
             d_chr((c==0x7f||c<0x20) ? '_' : c);
         }
@@ -114,38 +114,38 @@ void _immediate(U16 op)
 ///> 32-bit operators
 /// @brief: stand-alone functions to reduce register allocation in _invoke
 ///
-#define HI16(u)    ((U16)((u)>>16))
-#define LO16(u)    ((U16)((u)&0xffff))
-#define TO32(u, v) (((S32)(u)<<16) | LO16(v))
+#define S2D(u, v)  (((DU2)(u)<<16) | D_LO(v))
+#define D_HI(u)    ((U16)((u)>>16))
+#define D_LO(u)    ((U16)((u)&0xffff))
 void _clock() {
-    U32 u = millis();       // millisecond (32-bit value)
-    PUSH(LO16(u));
-    PUSH(HI16(u));
+    DU2 d = millis();       // millisecond (32-bit value)
+    PUSH(D_LO(d));
+    PUSH(D_HI(d));
 }
 void _dplus() {
-    S32 v = TO32(SS(2), SS(3)) + TO32(TOS, SS(1));
+    DU2 d = S2D(SS(2), SS(3)) + S2D(TOS, SS(1));
     POP(); POP();
-    SS(1) = (S16)LO16(v);
-    TOS   = (S16)HI16(v);
+    SS(1) = (DU)D_LO(d);
+    TOS   = (DU)D_HI(d);
 }
 void _dminus() {
-    S32 v = TO32(SS(2), SS(3)) - TO32(TOS, SS(1));
+    DU2 d = S2D(SS(2), SS(3)) - S2D(TOS, SS(1));
     POP(); POP();
-    SS(1) = (S16)LO16(v);
-    TOS   = (S16)HI16(v);
+    SS(1) = (DU)D_LO(d);
+    TOS   = (DU)D_HI(d);
 }
 void _dneg() {
-    S32 v = -TO32(TOS, SS(1));
-    SS(1) = (S16)LO16(v);
-    TOS   = (S16)HI16(v);
+    DU2 d = -S2D(TOS, SS(1));
+    SS(1) = (DU)D_LO(d);
+    TOS   = (DU)D_HI(d);
 }
 ///
 ///> invoke a built-in opcode
-///> Note: computed goto takes extra 128-bytes for ~60ms/100K faster
+///> Note: computed goto takes extra 128-bytes for ~5% faster
 ///
 void _invoke(U8 op)
 {
-#if N4_USE_GOTO
+#if N4_USE_GOTO                     // defined in n4_asm.h
     #define DISPATCH(op) goto *vt[op];
     #define _X(i,g)      L_##i: { g; } return
     #define LL(i) \
@@ -164,12 +164,12 @@ void _invoke(U8 op)
     _X(1,  POP());                  // DRP
     _X(2,  PUSH(TOS));              // DUP
     _X(3,                           // SWP
-        U16 x = SS(1);
+        DU x = SS(1);
         SS(1) = TOS;
         TOS   = x);
     _X(4,  PUSH(SS(1)));            // OVR
     _X(5,                           // ROT
-        U16 x = SS(2);
+        DU x = SS(2);
         SS(2) = SS(1);
         SS(1) = TOS;
         TOS   = x);
@@ -184,16 +184,16 @@ void _invoke(U8 op)
     _X(14, TOS ^= POP());           // XOR
     _X(15, TOS ^= -1);              // NOT
     _X(16, TOS <<= POP());          // LSH
-    _X(17, U16 n = POP(); TOS = (U16)TOS >> n);  // RSH
+    _X(17, DU n = POP(); TOS = (U16)TOS >> n);  // RSH
     _X(18, TOS = BOOL(POP()==TOS)); // =
     _X(19, TOS = BOOL(POP()> TOS)); // <
     _X(20, TOS = BOOL(POP()< TOS)); // >
     _X(21, TOS = BOOL(POP()!=TOS)); // <>
-    _X(22, U8 *p = DIC(POP()); PUSH(GET16(p)) ); // @
-    _X(23, U8 *p = DIC(POP()); ENC16(p, POP())); // !
-    _X(24, U8 *p = DIC(POP()); PUSH((U16)*p)  ); // C@
+    _X(22, U8 *p = DIC(POP()); PUSH(FETCH(p)) ); // @
+    _X(23, U8 *p = DIC(POP()); STORE(p, POP())); // !
+    _X(24, U8 *p = DIC(POP()); PUSH((DU)*p)  );  // C@
     _X(25, U8 *p = DIC(POP()); *p = (U8)POP() ); // C!
-    _X(26, PUSH((U16)key()));       // KEY
+    _X(26, PUSH((DU)key()));        // KEY
     _X(27, d_chr((U8)POP()));       // EMT
     _X(28, d_chr('\n'));            // CR
     _X(29, d_num(POP()); d_chr(' ')); // .
@@ -209,8 +209,8 @@ void _invoke(U8 op)
     _X(39, _dminus());              // D-
     _X(40, _dneg());                // DNG
     _X(41, TOS = TOS > 0 ? TOS : -TOS);           // ABS
-    _X(42, S16 n = POP(); TOS = n>TOS ? n : TOS); // MAX
-    _X(43, S16 n = POP(); TOS = n<TOS ? n : TOS); // MIN
+    _X(42, DU n = POP(); TOS = n>TOS ? n : TOS);  // MAX
+    _X(43, DU n = POP(); TOS = n<TOS ? n : TOS);  // MIN
     _X(44, NanoForth::wait((U32)POP()));          // DLY
     _X(45, PUSH(d_in(POP())));                    // IN
     _X(46, PUSH(a_in(POP())));                    // AIN
@@ -239,7 +239,7 @@ void _invoke(U8 op)
 ///
 ///> opcode execution unit i.e. inner interpreter
 ///
-void _nest(U16 xt)
+void _nest(IU xt)
 {
     RPUSH(LFA_END);                                       // enter function call
     while (xt != LFA_END) {                               ///> walk through instruction sequences
@@ -250,7 +250,7 @@ void _nest(U16 xt)
 #endif // TRC_LEVEL
 
         if ((op & CTL_BITS)==JMP_OPS) {                   ///> determine control bits
-            U16 w = (((U16)op<<8) | *DIC(xt+1)) & ADR_MASK;  // target address
+            IU w = (((IU)op<<8) | *DIC(xt+1)) & ADR_MASK; // target address
             switch (op & JMP_MASK) {                      // get branch opcode
             case OP_CALL:                                 // 0xc0 subroutine call
                 serv_isr();                               // loop-around every 256 ops
@@ -275,8 +275,8 @@ void _nest(U16 xt)
             switch(op) {
             case I_RET: xt = RPOP();     break;           // POP return address
             case I_LIT: {                                 // 3-byte literal
-                U16 w = GET16(DIC(xt));                   // fetch the 16-bit literal
-                PUSH(w);                                  // put the value on TOS
+                DU v = FETCH(DIC(xt));                    // fetch the literal
+                PUSH(v);                                  // put the value on TOS
                 xt += 2;                                  // skip over the 16-bit literal
             }                            break;
             case I_DQ:                                    // handle ." (len,byte,byte,...)
@@ -318,7 +318,7 @@ int  pop()       { return POP(); }
 ///> virtual machine interrupt service routine
 ///
 void serv_isr() {
-    U16 xt = N4Intr::isr();
+    IU xt = N4Intr::isr();
     if (xt) _nest(xt);
 }
 ///

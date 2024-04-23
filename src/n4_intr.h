@@ -18,15 +18,15 @@
 
 namespace N4Intr {
     void reset();                  ///< reset interrupts
-    U16  isr();                    ///< fetch interrupt service routines
+    IU   isr();                    ///< fetch interrupt service routines
 
     void add_tmisr(
             U16 i,                 ///< interrupt handler slot#
             U16 n,                 ///< interrupt period (n x 10ms = period)
-            U16 xt);               ///< handler's xt
+            IU xt);                ///< handler's xt
     void add_pcisr(
             U16 pin,               ///< pin change to capture
-            U16 xt);               ///< handler's xt
+            IU xt);                ///< handler's xt
 
     void enable_timer(U16 f);      ///< ENABLE=1, DISABLE=0
     void enable_pci(U16 f);

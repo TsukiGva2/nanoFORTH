@@ -14,7 +14,7 @@ namespace N4Core {
 ///@name MMU controls
 ///@{
 U8      *dic   { NULL };                       ///< base of dictionary
-N4Task  vm;                                    ///< VM states
+N4Task  vm     { NULL, NULL };                 ///< VM states
 ///@}
 ///@name IO controls
 ///@{
@@ -28,7 +28,7 @@ U8      _ucase { 0 };                          ///< empty flag for terminal inpu
 ///@}
 ///
 void init_mem() {
-    U16 sz = N4_DIC_SZ + N4_STK_SZ + N4_TIB_SZ;///< core memory block
+    IU sz = N4_DIC_SZ + N4_STK_SZ + N4_TIB_SZ; ///< core memory block
     dic  = (U8*)malloc(sz);                    /// * allocate Forth memory block
     _tib = dic + N4_DIC_SZ + N4_STK_SZ;        /// * grows N4_TIB_SZ
 }
@@ -49,8 +49,8 @@ void memstat()
     log("|STK=$");   logx(N4_STK_SZ);                         // stack size
     log("|TIB=$");   logx(N4_TIB_SZ);
 #if ARDUINO
-    S16 bsz = (S16)((U8*)&bsz - _tib);                        // free for TIB in bytes
-    show("] auto="); d_num((U16)((U8*)&bsz - &_tib[N4_TIB_SZ]));
+    DU bsz = (DU)((U8*)&bsz - &_tib[N4_TIB_SZ]);              // free for auto variables
+    show("] auto="); d_num(bsz);
 #endif // ARDUINO
 }
 ///@}
@@ -73,9 +73,9 @@ void d_chr(char c)     {
         NanoForth::yield();
     }
 }
-void d_adr(U16 a)        { d_nib(a>>8); d_nib((a>>4)&0xf); d_nib(a&0xf); }
-void d_ptr(U8 *p)        { U16 a=(U16)p; d_chr('p'); d_adr(a); }
-void d_num(S16 n)        { _hex ? io->print(n&0xffff,HEX) : io->print(n); }
+void d_adr(IU a)         { d_nib(a>>8); d_nib((a>>4)&0xf); d_nib(a&0xf); }
+void d_ptr(U8 *p)        { IU a=(IU)p; d_chr('p'); d_adr(a); }
+void d_num(DU  n)        { _hex ? io->print(n&0xffff,HEX) : io->print(n); }
 void d_pin(U16 p, U16 v) { pinMode(p, v); }
 U16  d_in(U16 p)         { return digitalRead(p); }
 void d_out(U16 p, U16 v) {
@@ -100,25 +100,25 @@ void a_out(U16 p, U16 v) { analogWrite(p, v); }
 #else
 char key()               { return getchar();  }
 void d_chr(char c)       { printf("%c", c);   }
-void d_adr(U16 a)        { printf("%03x", a); }
+void d_adr(IU a)         { printf("%03x", a); }
 void d_ptr(U8 *p)        { printf("%p", p);   }
-void d_num(S16 n)        { printf(_hex ? "%x" : "%d", n); }
+void d_num(DU n)         { printf(_hex ? "%x" : "%d", n); }
 void d_pin(U16 p, U16 v) { /* do nothing */ }
 U16  d_in(U16 p)         { return 0; }
 void d_out(U16 p, U16 v) { /* do nothing */ }
 U16  a_in(U16 p)         { return 0; }
 void a_out(U16 p, U16 v) { /* do nothing */ }
 #endif //ARDUINO
-void d_str(U8 *p)        { for (U8 i=0, sz=*p++; i<sz; i++) d_chr(*p++); }
+void d_str(U8 *p)        { for (int i=0, sz=*p++; i<sz; i++) d_chr(*p++); }
 void d_nib(U8 n)         { d_chr((n) + ((n)>9 ? 'a'-10 : '0')); }
 void d_u8(U8 c)          { d_nib(c>>4); d_nib(c&0xf); }
 ///@}
 ///
 ///> dump byte-stream between pointers with delimiter option
 ///
-void d_mem(U8* base, U8 *p0, U16 sz, U8 delim)
+void d_mem(U8* base, U8 *p0, IU sz, U8 delim)
 {
-    d_adr((U16)(p0 - base)); d_chr(':');
+    d_adr((IU)(p0 - base)); d_chr(':');
     for (int n=0; n<sz; n++) {
         if (delim && (n&0x3)==0) d_chr(delim);
         d_u8(*p0++);
@@ -143,9 +143,9 @@ void d_name(U8 op, const char *lst, U8 space)
 ///
 ///> parse a literal from string
 ///
-U8 number(U8 *str, S16 *num)
+U8 number(U8 *str, DU *num)
 {
-    S16 n   = 0;
+    DU  n   = 0;
     U8  c   = *str;
     U8  neg = (c=='-') ? (c=*++str, 1)  : 0;              /// * handle negative sign
     U8  base= c=='$' ? (str++, 16) : (_hex ? 16 : 10);    /// * handle hex number
@@ -180,7 +180,7 @@ char vkey() {
 #else
     char c = *p;
 #endif // ARDUINO
-	return c ? (p++, c) : key();                /// feed key() after preload exhausted
+	return c ? (p++, c) : key();             /// feed key() after preload exhausted
 }
 
 void _console_input()
@@ -201,7 +201,7 @@ void _console_input()
             d_chr(' ');
             d_chr('\b');
         }
-        else if (p > (U8*)(&c - sizeof(U32))) { /// * prevent buffer overrun (into auto vars)
+        else if (p >= &_tib[N4_TIB_SZ]) { /// * prevent buffer overrun (into auto vars)
             show("TIB!\n");
             *p = 0;
             break;
@@ -225,13 +225,13 @@ U8 ok()
          *    dic-->       +-->rp  sp<--+-->tib   auto<--+
          *                         TOS NOS
          */
-		S16 *sp0 = (S16*)_tib;               /// * fetch top of heap
-		S16 *rp1 = (S16*)(vm.rp+1);
+		DU  *sp0 = (DU*)_tib;          /// * fetch top of heap
+		DU  *rp1 = (DU*)(vm.rp+1);
 	    if (vm.sp <= rp1) {            /// * check stack overflow
 	        show("OVF!\n");
 	        vm.sp = rp1;               /// * stack max out
 	    }
-	    for (S16 *p=sp0-1; p >= vm.sp; p--) {   /// * dump stack content
+	    for (DU *p=sp0-1; p >= vm.sp; p--) { /// * dump stack content
 	        d_num(*p); d_chr('_');
 	    }
 	    show("ok");                          /// * user input prompt
@@ -278,13 +278,13 @@ U8 *get_token(U8 rst)
 ///> search keyword in a nanoForth name field list
 ///  * one blank byte padded at the end of input string
 ///
-U8 scan(U8 *tkn, const char *lst, U16 *id)
+U8 scan(U8 *tkn, const char *lst, IU *id)
 {
     for (int n=1, m=pgm_read_byte(lst); n < m*3; n+=3) {
         if (uc(tkn[0])==pgm_read_byte(lst+n)   &&
             uc(tkn[1])==pgm_read_byte(lst+n+1) &&
             (tkn[1]==' ' || uc(tkn[2])==pgm_read_byte(lst+n+2))) {
-            *id = n/3;  // 3-char a word
+            *id = (IU)(n/3);  // 3-char a word
             return 1;
         }
     }

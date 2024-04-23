@@ -37,7 +37,7 @@ constexpr U8  JMP_OPS  = 0xc0;   ///< 1100 0000
 constexpr U8  PRM_OPS  = 0x80;   ///< 1000 0000
 constexpr U8  JMP_MASK = 0xf0;   ///< 11nn xxxx, nn - CALL 00, CDJ 01, UDJ 10, NXT 11
 constexpr U8  PRM_MASK = 0x3f;   ///< 00nn nnnn, 6-bit primitive opcodes
-constexpr U16 ADR_MASK = 0x0fff; ///< 0000 aaaa aaaa aaaa 12-bit address in 16-bit branching instructions
+constexpr IU  ADR_MASK = 0x0fff; ///< 0000 aaaa aaaa aaaa 12-bit address in 16-bit branching instructions
 ///@}
 ///@name Opcode Prefixes
 ///@{
@@ -57,7 +57,7 @@ enum N4_EXT_OP {                 ///< extended opcode (used by for...nxt loop)
     I_FOR,                       ///< 62
     I_LIT                        ///< 63 = 0x3f 3-byte literal
 };
-constexpr U16 LFA_END = 0xffff;  ///< end of link field
+constexpr IU LFA_END = 0xffff;   ///< end of link field
 ///
 /// Assembler class
 ///
@@ -68,36 +68,36 @@ namespace N4Asm                     // (10-byte header)
 
     // EEPROM persistence I/O
     void save(U8 autorun=0);        ///< persist user dictionary to EEPROM
-    U16  load(U8 autorun=0);        ///< restore user dictionary from EEPROM
+    IU   load(U8 autorun=0);        ///< restore user dictionary from EEPROM
 
-    U16 reset();                    ///< reset internal pointers (for BYE)
+    IU   reset();                   ///< reset internal pointers (for BYE)
 
     /// Instruction decoder
     N4OP parse(
         U8  *tkn,                   ///< token to be parsed
-        U16 *rst,                   ///< parsed result
+        IU  *rst,                   ///< parsed result
         U8  run                     ///< run mode flag (1: run mode, 0: compile mode)
         );
     /// Forth compiler
     void compile(
-        U16 *rp0                    ///< memory address to be used as assembler return stack
+        IU *rp0                     ///< memory address to be used as assembler return stack
         );
     void variable();                ///< create a variable on dictionary
-    void constant(S16 v);           ///< create a constant on dictionary
+    void constant(DU v);            ///< create a constant on dictionary
     /// meta compiler
     void create();                  ///< create a word name field
-    void comma(S16 v);              ///< compile a 16-bit value onto dictionary
-    void ccomma(S16 v);             ///< compile a 8-it value onto dictionary
-    void does(U16 xt);              ///< metaprogrammer (jump to definding word DO> section)
+    void comma(DU v);               ///< compile a 16-bit value onto dictionary
+    void ccomma(DU v);              ///< compile a 8-it value onto dictionary
+    void does(IU xt);               ///< metaprogrammer (jump to definding word DO> section)
     // dictionary, string list scanners
-    U16  query();                   ///< get xt of next input token, 0 if not found
+    IU  query();                    ///< get xt of next input token, 0 if not found
     void words();                   ///< display words in dictionary
     void forget();                  ///< forgets word in the dictionary
     void see();                     ///< decode colon word
 
     /// print execution tracing info
     U16 trace(
-        U16  adr,                   ///< address to word to be executed
+        IU   adr,                   ///< address to word to be executed
         U8   ir,                    ///< instruction register value
         char delim=0                ///< token delimiter
         );
