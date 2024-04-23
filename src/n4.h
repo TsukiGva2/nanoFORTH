@@ -21,7 +21,7 @@
 #ifndef __SRC_N4_H
 #define __SRC_N4_H
 
-#define APP_NAME          "\nnanoForth 2.2"
+#define APP_NAME          "\nnanoForth 2.2 "
 #define N4_API_SZ         8       /**< C API function pointer slots */
 #define TRC_LEVEL         0       /**< tracing verbosity level      */
 
@@ -31,7 +31,7 @@
 #include <Arduino.h>
 #define log(msg)          Serial.print(F(msg))
 #define logx(v)           Serial.print((U16)v, HEX)
-#else
+#else  // !ARDUINO                // for debugging
 #include <cstdint>                // uint_t
 #include <cstdio>                 // printf
 #include <cstdlib>                // malloc
@@ -60,6 +60,9 @@ typedef void (*FPTR)();           ///< function pointer
 ///
 /// nanoForth main control object (with static members that support multi-threading)
 ///
+typedef U16          IU;          ///< 16-bit instruction unit (ADDR)
+typedef S16          DU;          ///< 16-bit data unit (CELL)
+typedef S32          DU2;
 class NanoForth
 {
 	static FPTR fp[N4_API_SZ];    ///< C API function pointer slots
@@ -75,7 +78,7 @@ public:
     // protothreading support
     //
     static void add_api(          ///< add the user function to NanoForth task manager
-    	int  i,                   ///< index of function pointer slots
+    	U16 i,                    ///< index of function pointer slots
         void (*fp)()              ///< user function pointer to be added
         );
     static void yield();          ///< nanoForth yield to user tasks
