@@ -14,7 +14,7 @@ namespace N4Core {
 ///@name MMU controls
 ///@{
 U8      *dic   { NULL };                       ///< base of dictionary
-N4Task  vm     { NULL, NULL };                 ///< VM states
+N4Task  vm     { NULL, NULL };                 ///< VM context
 ///@}
 ///@name IO controls
 ///@{
@@ -42,15 +42,17 @@ char uc(char c)      {                         ///< upper case for case-insensit
 ///
 ///> show system memory allocation info
 ///
-void memstat()
+void mstat()
 {
-    log("MEM=$");    logx(N4_DIC_SZ + N4_STK_SZ + N4_TIB_SZ); // forth memory block
-    log("[DIC=$");   logx(N4_DIC_SZ);                         // dictionary size
-    log("|STK=$");   logx(N4_STK_SZ);                         // stack size
-    log("|TIB=$");   logx(N4_TIB_SZ);
+    int tot = N4_DIC_SZ + N4_STK_SZ + N4_TIB_SZ;
+    show(APP_NAME);                      /// * show init prompt
+    log("[DIC=$");    logx(N4_DIC_SZ);                         // dictionary size
+    log("|SS,RS=$");  logx(N4_STK_SZ);                         // stack size
+    log("|TIB=$");    logx(N4_TIB_SZ);
+    log("] total=$"); logx(tot);                              // total forth memory block
 #if ARDUINO
     DU bsz = (DU)((U8*)&bsz - &_tib[N4_TIB_SZ]);              // free for auto variables
-    show("] auto="); d_num(bsz);
+    log(", auto=$");   logx(bsz);  log("\n");
 #endif // ARDUINO
 }
 ///@}

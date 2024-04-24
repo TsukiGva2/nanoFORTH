@@ -54,7 +54,7 @@ namespace N4Core
     extern Stream *io;              ///< default to Arduino Serial Monitor
 
     void init_mem();                ///< initialize MMU
-    void memstat();                 ///< display MMU statistics
+    void mstat();                   ///< display MMU statistics
 
     void set_pre(const char *code); ///< set embedded Forth code
     void set_io(Stream *s);         ///< initialize or redirect IO stream

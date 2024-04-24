@@ -41,7 +41,7 @@ namespace N4VM {
 ///
 void _nest(IU xt);                       /// * forward declaration
 void _init() {
-    show(APP_NAME);                      /// * show init prompt
+    mstat();
 
     vm.rp = (IU*)DIC(N4_DIC_SZ);         /// * reset return stack pointer
     vm.sp = SP0;                         /// * reset data stack pointer
@@ -300,7 +300,6 @@ void _nest(IU xt)
 void setup(const char *code, Stream &io, U8 ucase)
 {
     init_mem();
-    memstat();               ///< display VM system info
 
     set_pre(code);           /// * install embedded Forth code
     set_io(&io);             /// * set IO stream pointer (static member, shared with N4ASM)
