@@ -1,6 +1,6 @@
-The emerging micro-controller communities are no more focusing on specific hardware or form factor but around toolchain provided typically with higher-level languages. The once popular Arduino platform gradually lose out the market share to ESP, Raspberry, and whatever new kids on the block. Being chip agnostic, the Arduino IDE does serve as an excellent learning tool for future systems to come. No matter how the hardware environment evolved, espcially on the edge of IoT universe, I felt a minimalist system similar to the Aruino UNO/Nano will always have its value expecially in learning even when the size of chips shrunk down to micro or even nano-scale one-day.
+The emerging micro-controller communities are no more focusing on specific hardware or form factor but around tool-chain provided typically with higher-level languages. The once popular Arduino platform gradually lose out the market share to ESP, Raspberry, and whatever new kids on the block. Being chip agnostic, the Arduino IDE does serve as an excellent learning tool for future systems to come. No matter how the hardware environment evolved, especially on the edge of IoT universe, I felt a minimalist system similar to the Arduino UNO/Nano will always have its value especially in learning even when the size of chips shrunk down to micro or even nano-scale one-day.
 
-On the language end, check out <a href="https://www.forth.com/resources/space-applications" target="_blank">NASA</a> and contemplate why FORTH is still running on a number of space probes today. It's known that projects developed in interactive/incremental style can be more productive compared to typical static toolchain such as the C/C++ provided by Arduino.
+On the language end, check out <a href="https://www.forth.com/resources/space-applications" target="_blank">NASA</a> and contemplate why FORTH is still running on a number of space probes today. It's known that projects developed in interactive/incremental style can be more productive compared to typical static tool-chain such as the C/C++ provided by Arduino.
 
 I touched FORTH briefly years ago back in school days. After seeing <a href="http://middleriver.chagasi.com/electronics/tforth.html" target="_blank">Nakagawa's TinyForth</a>, I got this idea!
 
@@ -9,9 +9,9 @@ I touched FORTH briefly years ago back in school days. After seeing <a href="htt
 
     + many Arduino makers are still using UNO or Nano,
     + most do not need the full-blown FORTH vocabularies,
-      anything more that might need ESP or RPi.
+      50+ words or so, anything more might need ESP or RPi.
     + most are not familiar with standard FORTH words, abbreviation would be OK,
-    + meta-compiler not needed, i.e. to create a new Forth
+    + meta-compiler not needed, i.e. no trying to build a new Forth
 
 ### Requirements
 
@@ -37,7 +37,7 @@ I touched FORTH briefly years ago back in school days. After seeing <a href="htt
 * Turn off LED(blue) on digital pin 6, (0 is LOW).
 > 0 6 OUT ⏎
 
-* Tefine a function, or a 'word' in FORTH, **red** to turn red LED on, and blue LED off.
+* Define a function, or a 'word' in FORTH, **red** to turn red LED on, and blue LED off.
 > : **red** 1 5 OUT 0 6 OUT ; ⏎
 >> \> the symbol : starts the definition, and ; ends the function (or word) definition
 
@@ -46,7 +46,7 @@ I touched FORTH briefly years ago back in school days. After seeing <a href="htt
 
 * Execute **blu**, i.e. to turn red LED off, and blue LED on.
 > **blu** ⏎
->> \> a function is defines in the 'Compile Mode', and executed in 'Interpreter Mode'. The differece is at the leading ':' (colon) sign.
+>> \> a function is defines in the 'Compile Mode', and executed in 'Interpreter Mode'. The difference is at the leading ':' (colon) sign.
 
 * Define a word **xy** to blink red/blue every 500 ms alternatively.
 > : **xy** FOR **red** 500 DLY **blu** 500 DLY NXT ; ⏎
@@ -62,7 +62,7 @@ I touched FORTH briefly years ago back in school days. After seeing <a href="htt
 > FGT **xy** ⏎<br/>
 >> \> that erased **xy** from memory, we can redefine it now<br/>
 >> \> actually, multiple definition of the same function is allowed, the latest one takes precedence.<br/>
->> \> also, FGT a word that is an interrupt service (see page3) might cause undefined behaviour
+>> \> also, FGT a word that is an interrupt service (see page3) might cause undefined behavior
 >
 > : **xy** FOR **red** 200 DLY **blu** 300 DLY **I .** NXT ; ⏎<br/>
 
@@ -74,8 +74,8 @@ I touched FORTH briefly years ago back in school days. After seeing <a href="htt
 * Let's try analog, say read a value from analog pin 1, assuming you have one installed, or [try this Wokwi project](https://wokwi.com/projects/359920992049600513) again
 > 1 AIN ⏎<br>
 > ⇨ 258_ok
->> \> 258 is the value nanoFORTH read from photoresister, then place it on top of data stack
->> \> a photoresister or potentiometer returns value between 0 and 1023
+>> \> 258 is the value nanoFORTH read from photo-resister, then place it on top of data stack
+>> \> a photo-resister or potentiometer returns value between 0 and 1023
 
 * If we don't need the value 258, we can drop it from data stack to keep it clean
 > DRP ⏎<br>
@@ -117,10 +117,10 @@ Behold! This is nanoFORTH in its entirety. It's a short list of 'words' which sh
 
 <br/>
 
-OK! If the process shown above has captured the essense, we should have an idea of what nanoFORTH is trying to do. Let's just stop and contemplate for a while. We did all of the above without any recompilation. Instead, we "talked" directly with the nanoFORTH uploaded only once via the USB cable. Should you code these in C, how do you go about doing it?
+OK! If the process shown above has captured the essence, we should have an idea of what nanoFORTH is trying to do. Let's just stop and contemplate for a while. We did all of the above without any recompilation. Instead, we "talked" directly with the nanoFORTH uploaded only once via the USB cable. Should you code these in C, how do you go about doing it?
 
 The interactive nature is different from the way we are so used to on Arduino platform. Just consider how many times you have to compile your C code to go through the functions shown above. So, move forward, let's envision how we can control robots or what we can do using Bluetooth with our Nano...
 
-<br/>
-[2. How - Ready to get nanoFORTH for a trial?](https://chochain.github.io/nanoFORTH/html/page2.html)<br/>
-[3. What - References and all the details...](https://chochain.github.io/nanoFORTH/html/page3.html)
+<BR/>
+2. How - Ready to give nanoFORTH [a trial](https://chochain.github.io/nanoFORTH/html/page2.html)<br/>
+3. What - References and all [the details](https://chochain.github.io/nanoFORTH/html/page3.html)
