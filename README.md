@@ -13,14 +13,14 @@ I touched FORTH briefly years ago back in school days. After seeing <a href="htt
     + most are not familiar with standard FORTH words, abbreviation would be OK,
     + meta-compiler not needed, i.e. no trying to build a new Forth
 
-### Requirements
+### Features
 
     + no bootloader burning needed, so no extra cost or bricking,
     + a downloadable library from Arduino IDE,
-    + some simple .ino Sketch examples
+    + easy to follow .ino Sketch examples, (bluetooth, 7-seg, robot)
     + 1K RAM dictionary, and EEPROM to persist user defined words,
     + call Arduino functions, (i.g. pinMode, digitalRead/Write, analogRead/Write, millis, delay),
-    + C API, for user defined functions (ig. Servo, Bluetooth, ...),
+    + C API, for user defined functions (ig. Bluetooth, Servo, ...),
     + timer ISR, support multi-tasking,
     + pin change ISR, support hardware trigger,
     + memory dump and execution trace, to understand FORTH internal,
@@ -62,7 +62,7 @@ I touched FORTH briefly years ago back in school days. After seeing <a href="htt
 > FGT **xy** ⏎<br/>
 >> \> that erased **xy** from memory, we can redefine it now<br/>
 >> \> actually, multiple definition of the same function is allowed, the latest one takes precedence.<br/>
->> \> also, FGT a word that is an interrupt service (see page3) might cause undefined behavior
+>> \> also, FGT a word that is an interrupt service (see [page3](https://chochain.github.io/nanoFORTH/html/page3.html)) might cause undefined behavior
 >
 > : **xy** FOR **red** 200 DLY **blu** 300 DLY **I .** NXT ; ⏎<br/>
 
@@ -121,6 +121,5 @@ OK! If the process shown above has captured the essence, we should have an idea 
 
 The interactive nature is different from the way we are so used to on Arduino platform. Just consider how many times you have to compile your C code to go through the functions shown above. So, move forward, let's envision how we can control robots or what we can do using Bluetooth with our Nano...
 
-<BR/>
-<a href="https://chochain.github.io/nanoFORTH/html/page2.html" _target="_blank">Ready to give nanoFORTH a trial?</a><br/>
-<a href="https://chochain.github.io/nanoFORTH/html/page3.html" _target="_blank">or to References and all the details...</a>
+<br/>
+Ready to <a href="https://chochain.github.io/nanoFORTH/html/page2.html" _target="_blank">give nanoFORTH a trial?</a> or view <a href="https://chochain.github.io/nanoFORTH/html/page3.html" _target="_blank">References and all the details...</a>
