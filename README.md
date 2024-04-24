@@ -56,7 +56,7 @@ Following the footsteps of <a href="http://middleriver.chagasi.com/electronics/t
 > 10 **xy** ⏎
 > ||
 > |:--|
-> |<img src="http://i3.ytimg.com/vi/trmDNh41-pQ/hqdefault.jpg" width="400" height="320"><a href="https://www.youtube.com/embed/trmDNh41-pQ?version=3&playlist=trmDNh41-pQ&loop=1&controls=0" /></img>|
+> |<img src="http://i3.ytimg.com/vi/trmDNh41-pQ/hqdefault.jpg" width="400" height="320">(https://www.youtube.com/watch?v=trmDNh41-pQ&list=TLGG58D8AE__MqoyNDA0MjAyNA)</img>|
 >> \> so, 10 FOR ... NXT is to loop 10 times, (counting down from 10, 9, 8, ..., 2, 1)
 
 * If that's a bit too slow! nanoFORTH allows you redefine **xy** by "forget" it first.
