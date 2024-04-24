@@ -1,34 +1,33 @@
-The emerging micro-controller communities are being built no more around specific hardware form factor but around higher level languages rather. The once popular Arduino platform gradually lose out the market share to ESP and Raspberry. Being chip agnostic, the Arduino IDE does serve as an excellent learning tool for future systems to come. I felt that no matter how the hardware environment evolved, espcially on the edge of IoT universe, a minimalist system similar to the Aruino UNO/Nano will always have its value. Of course, the size of chips might one-day shrunk down to micro or even nano-scale.
+The emerging micro-controller communities are no more focusing on specific hardware or form factor but around toolchain provided typically with higher-level languages. The once popular Arduino platform gradually lose out the market share to ESP, Raspberry, and whatever new kids on the block. Being chip agnostic, the Arduino IDE does serve as an excellent learning tool for future systems to come. I felt that no matter how the hardware environment evolved, espcially on the edge of IoT universe, a minimalist system similar to the Aruino UNO/Nano will always have its value expecially in learning even when the size of chips shrunk down to micro or even nano-scale one-day.
 
-Check out <a href="https://www.forth.com/resources/space-applications" target="_blank">NASA</a> and contemplate why FORTH is still running on a number of space probes today. It's known that projects developed in interactive/incremental style can be more productive compared to typical static toolchain such as the C/C++ provided by Arduino.
+On the language end, check out <a href="https://www.forth.com/resources/space-applications" target="_blank">NASA</a> and contemplate why FORTH is still running on a number of space probes today. It's known that projects developed in interactive/incremental style can be more productive compared to typical static toolchain such as the C/C++ provided by Arduino.
 
-## nanoFORTH - FORTH for Arduino Nano, straight from your .ino file
-Following the footsteps of <a href="http://middleriver.chagasi.com/electronics/tforth.html" target="_blank">Nakagawa</a> and <a href="https://circuit4us.medium.com/tiny-forth-with-arduino-hardware-support-255f408b745a" target="_blank">circuit4u@medium.com's</a> **TinyForth**, a light-weight FORTH with 3-character keywords for Arduino, I got an idea!
+Reviewing Taken hints from <a href="http://middleriver.chagasi.com/electronics/tforth.html" target="_blank">Nakagawa's TinyForth</a>, I got this idea!
 
-### Assumptions
-* more than 80% of Arduino makers are using UNO or Nano,
-* most of the makers do not need the full-blown FORTH vocabularies,
-* most of them are not familiar with standard FORTH words, so abbreviation for words is OK,
-* the meta-compiler is unlikely needed either, i.e. not to create a new type of Forth from within nanoForth,
-* only a small set of, say 50+, core primitive words are needed for the most of Arduino projects,
-  the rationale being anything that requires more elaborated syntax, one might need the power of ESPs.
+## nanoFORTH - FORTH for Arduino Nano
+### Observations
+
+    + many Arduino makers are still using UNO or Nano,
+    + most do not need the full-blown FORTH vocabularies,
+      anything more that might need ESP or RPi.
+    + most are not familiar with standard FORTH words, abbreviation would be OK,
+    + meta-compiler not needed, i.e. to create a new Forth
 
 ### Requirements
-* be as simple to use as any example Sketch that comes with the IDE (no bootloader burning),
-* provide a REPL development/operating environment for Arduino,
-* provide core Arduino functions (i.g. pinMode, digitalRead/Write, analogRead/Write, millis, delay),
-* provide an Arduino library that developers can include easily,
-* provide at least 1K RAM dictionary for reasonably size of work,
-* utilize EEPROM as the persistant storage for user defined words that can be reloaded after restart,
-* provide C API so that user defined functions/components can be integrated (ig. Servo, Bluetooth, ...),
-* provide timer interrupt handler to support multi-tasking,
-* privide pin change interrupt handler to support hardware trigger,
-* show assembly trace (i.e. byte-code stream) to help beginners to understand FORTH internal,
-* show execution trace to enable debugging, also provision for single-stepping.
-* capable of autorun after reboot (from saved EEPROM image).
+
+    + no bootloader burning needed, so no extra cost or bricking,
+    + a downloadable library from Arduino IDE,
+    + some simple .ino Sketch examples
+    + 1K RAM dictionary, and EEPROM to persist user defined words,
+    + call Arduino functions, (i.g. pinMode, digitalRead/Write, analogRead/Write, millis, delay),
+    + C API, for user defined functions (ig. Servo, Bluetooth, ...),
+    + timer ISR, support multi-tasking,
+    + pin change ISR, support hardware trigger,
+    + memory dump and execution trace, to understand FORTH internal,
+    + autorun after reboot, can become a turnkey system
 
 ### Use Cases - Interaction Examples
-* Turn on LED(red) on digital pin 5, imagine you have a board hooked up, or try <a href="https://wokwi.com/projects/359920992049600513" target="_blank">check this Wokwi project</a>
+* Turn on LED(red) on digital pin 5, imagine you have a board hooked up, or [check this Wokwi project](https://wokwi.com/projects/359920992049600513)
 > 1 5 OUT ⏎
 > ||
 > |:--|
@@ -56,10 +55,10 @@ Following the footsteps of <a href="http://middleriver.chagasi.com/electronics/t
 > 10 **xy** ⏎
 > ||
 > |:--|
-> |<img src="http://i3.ytimg.com/vi/trmDNh41-pQ/hqdefault.jpg" width="400" height="320">(https://www.youtube.com/watch?v=trmDNh41-pQ&list=TLGG58D8AE__MqoyNDA0MjAyNA)</img>|
+> |[![Video](http://i3.ytimg.com/vi/trmDNh41-pQ/hqdefault.jpg)](https://www.youtube.com/embed/trmDNh41-pQ?version=3&playlist=trmDNh41-pQ&loop=1&controls=0)|
 >> \> so, 10 FOR ... NXT is to loop 10 times, (counting down from 10, 9, 8, ..., 2, 1)
 
-* If that's a bit too slow! nanoFORTH allows you redefine **xy** by "forget" it first.
+* If that flashes too slow for you, nanoFORTH allows redefining **xy** by "forget" it first.
 > FGT **xy** ⏎<br/>
 >> \> that erased **xy** from memory, we can redefine it now<br/>
 >> \> actually, multiple definition of the same function is allowed, the latest one takes precedence.<br/>
@@ -72,7 +71,7 @@ Following the footsteps of <a href="http://middleriver.chagasi.com/electronics/t
 > ⇨ 20 19 18 17 16 15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 ok
 >> \> so, you've probably noticed that **I** is the loop counter and . (dot) prints it<br/>
 
-* Let's try analog, say read a value from analog pin 1, assuming you have one installed, or again try <a href="https://wokwi.com/projects/359920992049600513" target="_blank">this Wokwi project</a>
+* Let's try analog, say read a value from analog pin 1, assuming you have one installed, or again [try this Wokwi project](https://wokwi.com/projects/359920992049600513)
 > 1 AIN ⏎<br>
 > ⇨ 258_ok
 >> \> 258 is the value nanoFORTH read from photoresister, then place it on top of data stack
