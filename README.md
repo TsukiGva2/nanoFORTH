@@ -32,7 +32,7 @@ Following the footsteps of <a href="http://middleriver.chagasi.com/electronics/t
 > 1 5 OUT ⏎
 > ||
 > |:--|
-> |@image html images/nanoforth_led_red.jpg width=200px|
+> |<img src="https://chochain.github.io/nanoFORTH/nanoforth_led_red.jpg" width=200px>LED</img>|
 <br/>
 
 * Turn off LED(blue) on digital pin 6, (0 is LOW).
@@ -56,7 +56,7 @@ Following the footsteps of <a href="http://middleriver.chagasi.com/electronics/t
 > 10 **xy** ⏎
 > ||
 > |:--|
-> |@htmlonly <iframe width="400" height="320" src="https://www.youtube.com/embed/trmDNh41-pQ?version=3&playlist=trmDNh41-pQ&loop=1&controls=0" title="" frameborder="0" allow="autoplay; picture-in-picture" allowfullscreen></iframe> @endhtmlonly|
+> |<iframe width="400" height="320" src="https://www.youtube.com/embed/trmDNh41-pQ?version=3&playlist=trmDNh41-pQ&loop=1&controls=0" title="" frameborder="0" allow="autoplay; picture-in-picture" allowfullscreen></iframe>|
 >> \> so, 10 FOR ... NXT is to loop 10 times, (counting down from 10, 9, 8, ..., 2, 1)
 
 * If that's a bit too slow! nanoFORTH allows you redefine **xy** by "forget" it first.
@@ -111,7 +111,7 @@ Following the footsteps of <a href="http://middleriver.chagasi.com/electronics/t
 > WRD ⏎
 > ||
 > |:--|
-> |@image html images/nanoforth_wrd_list.png width=800px|
+> |<img src="https://chochain.github.io/nanoFORTH/images/nanoforth_wrd_list.png" width=800px>WRD</img>|
 >> \> See the latest, they include **xyz**, **?z**, **xy**, **lit**, **blu**, **red** that we've just created.
 
 Behold! This is nanoFORTH in its entirety. It's a short list of 'words' which should be rather easy to master. Note that the steps illustrated above has been the way Forth programmers building their applications. One small word at a time. Debug each well interactively then combine them into a "bigger" word. If a bug found, FGT the word, redefine it. Next word!
