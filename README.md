@@ -122,5 +122,5 @@ OK! If the process shown above has captured the essence, we should have an idea 
 The interactive nature is different from the way we are so used to on Arduino platform. Just consider how many times you have to compile your C code to go through the functions shown above. So, move forward, let's envision how we can control robots or what we can do using Bluetooth with our Nano...
 
 <BR/>
-2. How - Ready to give nanoFORTH [a trial](https://chochain.github.io/nanoFORTH/html/page2.html)<br/>
-3. What - References and all [the details](https://chochain.github.io/nanoFORTH/html/page3.html)
+<a href="https://chochain.github.io/nanoFORTH/html/page2.html" _target="_blank">Ready to give nanoFORTH a trial?</a><br/>
+<a href="https://chochain.github.io/nanoFORTH/html/page3.html" _target="_blank">or to References and all the details...</a>
