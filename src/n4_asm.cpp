@@ -31,6 +31,11 @@ using namespace N4Core;                       /// * make utilities available
 /// @brief primitive words (53 of 61 allocated, 3 pre-allocated).
 /// @var PMX
 /// @brief loop control opcodes
+/// Note: Standard Forth
+///   VAL - CONSTANT
+///   DLY - MS
+///   NOT - INVERT
+///   NXT - NEXT, but break at 1
 ///
 ///@{
 PROGMEM const char IMM[] = "\xf"                                \
