@@ -79,8 +79,8 @@ void _immediate(U16 op)
         switch (op) {
         ///> compiler
         case 0: N4Asm::compile(vm.rp);  break;   /// * : (COLON), switch into compile mode (for new word)
-        case 1: N4Asm::variable();      break;   /// * VAR, create new variable
-        case 2: N4Asm::constant(POP()); break;   /// * VAL, create new constant
+        case 1: N4Asm::constant(POP()); break;   /// * VAL, create new constant
+        case 2: N4Asm::variable();      break;   /// * VAR, create new variable
         ///> interrupt handlers
         case 3: N4Intr::add_pcisr(               /// * PCI, create a pin change interrupt handler
                 POP(), N4Asm::query()); break;
@@ -92,17 +92,17 @@ void _immediate(U16 op)
         ///> numeric radix
         case 5: set_hex(1);             break;   /// * HEX
         case 6: set_hex(0);             break;   /// * DEC
+        ///> system
+        case 7: N4Asm::save(1);         break;   /// * SEX - save/execute (autorun)
+        case 8: N4Asm::save();          break;   /// * SAV
+        case 9: N4Asm::load();          break;   /// * LD
         ///> dicionary debugging
-        case 7: N4Asm::forget();        break;   /// * FGT, rollback word created
-        case 8: N4Asm::words();         break;   /// * WRD
-        case 9:                                  /// * DMP, memory dump
+        case 10: N4Asm::forget();       break;   /// * FGT, rollback word created
+        case 11:                                 /// * DMP, memory dump
             op = POP();
             _dump(POP(), op);           break;
-        case 10: N4Asm::see();          break;   /// * SEE
-        ///> system
-        case 11: N4Asm::save();         break;   /// * SAV
-        case 12: N4Asm::load();         break;   /// * LD
-        case 13: N4Asm::save(1);        break;   /// * SEX - save/execute (autorun)
+        case 12: N4Asm::see();          break;   /// * SEE
+        case 13: N4Asm::words();        break;   /// * WRD
 #if ARDUINO
         case 14: _init();               break;   /// * BYE, restart
 #else
@@ -160,6 +160,7 @@ void _invoke(U8 op)
 #endif // N4_USE_GOTO
 
     DISPATCH(op) {                  // switch(op) or goto *vt[op]
+    ///> stack ops
     _X(0,  {});                     // NOP, handled at upper level
     _X(1,  POP());                  // DRP
     _X(2,  PUSH(TOS));              // DUP
@@ -173,66 +174,72 @@ void _invoke(U8 op)
         SS(2) = SS(1);
         SS(1) = TOS;
         TOS   = x);
-    _X(6,  TOS += POP());           // +
-    _X(7,  TOS -= POP());           // -
+    ///> ALU ops
+    _X(6,  TOS %= POP());           // MOD
+    _X(7,  TOS /= POP());           // /
     _X(8,  TOS *= POP());           // *
-    _X(9,  TOS /= POP());           // /
-    _X(10, TOS %= POP());           // MOD
+    _X(9,  TOS -= POP());           // -
+    _X(10, TOS += POP());           // +
     _X(11, TOS = -TOS);             // NEG
-    _X(12, TOS &= POP());           // AND
+    _X(12, TOS ^= POP());           // XOR
     _X(13, TOS |= POP());           // OR
-    _X(14, TOS ^= POP());           // XOR
-    _X(15, TOS ^= -1);              // NOT
-    _X(16, TOS <<= POP());          // LSH
-    _X(17, DU n = POP(); TOS = (U16)TOS >> n);  // RSH
-    _X(18, TOS = BOOL(POP()==TOS)); // =
-    _X(19, TOS = BOOL(POP()> TOS)); // <
-    _X(20, TOS = BOOL(POP()< TOS)); // >
-    _X(21, TOS = BOOL(POP()!=TOS)); // <>
-    _X(22, U8 *p = DIC(POP()); PUSH(FETCH(p)) ); // @
-    _X(23, U8 *p = DIC(POP()); STORE(p, POP())); // !
-    _X(24, U8 *p = DIC(POP()); PUSH((DU)*p)  );  // C@
-    _X(25, U8 *p = DIC(POP()); *p = (U8)POP() ); // C!
-    _X(26, PUSH((DU)key()));        // KEY
-    _X(27, d_chr((U8)POP()));       // EMT
-    _X(28, d_chr('\n'));            // CR
-    _X(29, d_num(POP()); d_chr(' ')); // .
-    _X(30, {});                     // ."  handled one level up
-    _X(31, RPUSH(POP()));           // >R
-    _X(32, PUSH(RPOP()));           // R>
-    _X(33, PUSH(IDX(N4Asm::here))); // HRE
-    _X(34, PUSH(random(POP())));    // RND
-    _X(35, N4Asm::here += POP());   // ALO
-    _X(36, trc = POP());            // TRC
-    _X(37, _clock());               // CLK
-    _X(38, _dplus());               // D+
-    _X(39, _dminus());              // D-
-    _X(40, _dneg());                // DNG
-    _X(41, TOS = TOS > 0 ? TOS : -TOS);           // ABS
-    _X(42, DU n = POP(); TOS = n>TOS ? n : TOS);  // MAX
-    _X(43, DU n = POP(); TOS = n<TOS ? n : TOS);  // MIN
-    _X(44, NanoForth::wait((U32)POP()));          // DLY
-    _X(45, PUSH(d_in(POP())));                    // IN
-    _X(46, PUSH(a_in(POP())));                    // AIN
-    _X(47, U16 p = POP(); d_out(p, POP()));       // OUT
-    _X(48, U16 p = POP(); a_out(p, POP()));       // PWM
-    _X(49, U16 p = POP(); d_pin(p, POP()));       // PIN
-    _X(50, N4Intr::enable_timer(POP()));          // TME - enable/disable timer2 interrupt
-    _X(51, N4Intr::enable_pci(POP()));            // PCE - enable/disable pin change interrupts
-    _X(52, NanoForth::call_api(POP()));           // API
+    _X(14, TOS &= POP());           // AND
+    _X(15, TOS ^= 0xffff);          // NOT
+    _X(16, TOS <<= POP());                        // LSH
+    _X(17, DU n = POP(); TOS = (U16)TOS >> n);    // RSH
+    _X(18, DU n = POP(); TOS = n>TOS ? n : TOS);  // MAX
+    _X(19, DU n = POP(); TOS = n<TOS ? n : TOS);  // MIN
+    _X(20, TOS = TOS > 0 ? TOS : -TOS);           // ABS
+    _X(21, PUSH(random(POP())));                  // RND
+    ///> Logical ops
+    _X(22, TOS = BOOL(POP()==TOS));               // =
+    _X(23, TOS = BOOL(POP()> TOS));               // <
+    _X(24, TOS = BOOL(POP()< TOS));               // >
+    _X(25, TOS = BOOL(POP()!=TOS));               // <>
+    ///> IO ops
+    _X(26, PUSH((DU)key()));                      // KEY
+    _X(27, d_chr((U8)POP()));                     // EMT
+    _X(28, d_chr('\n'));                          // CR
+    _X(29, d_num(POP()); d_chr(' '));             // .
+    _X(30, {});                                   // ."  needs xt, handled in _nest()
+    _X(31, {});                                   // .S  needs xt, handled in _nest()
+    _X(32, POP(); d_str(DIC(POP())));             // TYP
+    ///> Compiler ops
+    _X(33, trc = POP());                          // TRC
+    _X(34, PUSH(IDX(N4Asm::here)));               // HRE
+    _X(35, RPUSH(POP()));                         // >R
+    _X(36, PUSH(RPOP()));                         // R>
+    _X(37, U8 *p = DIC(POP()); STORE(p, POP()));  // !
+    _X(38, U8 *p = DIC(POP()); PUSH(FETCH(p)) );  // @
+    _X(39, U8 *p = DIC(POP()); *p = (U8)POP() );  // C!
+    _X(40, U8 *p = DIC(POP()); PUSH((DU)*p)  );   // C@
+    _X(41, N4Asm::here += POP());                 // ALO
+    ///> Double ops
+    _X(42, _dneg());                              // DNG
+    _X(43, _dminus());                            // D-
+    _X(44, _dplus());                             // D+
+    _X(45, _clock());                             // CLK
+    ///> Arduino Specific ops
+    _X(46, NanoForth::wait((U32)POP()));          // DLY
+    _X(47, U16 p = POP(); a_out(p, POP()));       // PWM
+    _X(48, U16 p = POP(); d_out(p, POP()));       // OUT
+    _X(49, PUSH(a_in(POP())));                    // AIN
+    _X(50, PUSH(d_in(POP())));                    // IN
+    _X(51, U16 p = POP(); d_pin(p, POP()));       // PIN
+    _X(52, N4Intr::enable_pci(POP()));            // PCE - enable/disable pin change interrupts
+    _X(53, N4Intr::enable_timer(POP()));          // TME - enable/disable timer2 interrupt
+    _X(54, NanoForth::call_api(POP()));           // API
 #if N4_DOES_META
     ///> meta programming (for advance users)
-    _X(53, N4Asm::create());        // CRE, create a word (header only)
-    _X(54, N4Asm::comma(POP()));    // ,    comma, add a 16-bit value onto dictionary
-    _X(55, N4Asm::ccomma(POP()));   // C,   C-comma, add a 8-bit value onto dictionary
+    _X(55, _nest(POP()));           // EXE  execute a given parameter field
     _X(56, PUSH(N4Asm::query()));   // '    tick, get parameter field of a word
-    _X(57, _nest(POP()));           // EXE  execute a given parameter field
-    _X(58, {});                     // DO> handled at upper level
+    _X(57, {});                     // DO> needs xt, handled in _nest()
+    _X(58, N4Asm::create());        // CRE, create a word (header only)
+    _X(59, N4Asm::comma(POP()));    // ,    comma, add a 16-bit value onto dictionary
+    _X(60, N4Asm::ccomma(POP()));   // C,   C-comma, add a 8-bit value onto dictionary
 #endif // N4_DOES_META
-    _X(59, {});                     // available
-    _X(60, {});                     // available
-    _X(61, PUSH(*(vm.rp - 1)));     // 61, I
-    _X(62, RPUSH(POP()));           // 62, FOR
+    _X(61, RPUSH(POP()));           // 61, FOR
+    _X(62, PUSH(*(vm.rp - 1)));     // 62, I
     _X(63, {});                     // 63, LIT handled at upper level
     }
 }
@@ -254,14 +261,14 @@ void _nest(IU xt)
             switch (op & JMP_MASK) {                      // get branch opcode
             case OP_CALL:                                 // 0xc0 subroutine call
                 serv_isr();                               // loop-around every 256 ops
-                RPUSH(xt+2);                              // keep next instruction on return stack
+                RPUSH(xt + sizeof(IU));                   // keep next instruction on return stack
                 xt = w;                                   // jump to subroutine till I_RET
                 break;
-            case OP_CDJ: xt = POP() ? xt+2 : w; break;    // 0xd0 conditional jump
-            case OP_UDJ: xt = w;                break;    // 0xe0 unconditional jump
+            case OP_CDJ: xt = POP() ? xt + sizeof(IU) : w; break;  // 0xd0 conditional jump
+            case OP_UDJ: xt = w; break;                   // 0xe0 unconditional jump
             case OP_NXT:                                  // 0xf0 FOR...NXT
                 if (!--(*(vm.rp-1))) {                    // decrement counter *(rp-1)
-                    xt += 2;                              // break loop
+                    xt += sizeof(IU);                     // break loop
                     RPOP();                               // pop off loop index
                 }
                 else xt = w;                              // loop back
@@ -277,10 +284,14 @@ void _nest(IU xt)
             case I_LIT: {                                 // 3-byte literal
                 DU v = FETCH(DIC(xt));                    // fetch the literal
                 PUSH(v);                                  // put the value on TOS
-                xt += 2;                                  // skip over the 16-bit literal
+                xt += sizeof(DU);                         // skip over the 16-bit literal
             }                            break;
             case I_DQ:                                    // handle ." (len,byte,byte,...)
                 d_str(DIC(xt));                           // display the string
+                xt += *DIC(xt) + 1;      break;           // skip over the string
+            case I_SQ:                                    // handle S" (len,byte,byte,...) 
+                PUSH(xt);                                 // string pointer
+                PUSH(*DIC(xt));                           // length of string (not used mostly)
                 xt += *DIC(xt) + 1;      break;           // skip over the string
             case I_DO:                                    // metaprogrammer
                 N4Asm::does(xt);                          // jump to definding word DO> section

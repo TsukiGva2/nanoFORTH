@@ -39,26 +39,26 @@ using namespace N4Core;                       /// * make utilities available
 ///
 ///@{
 PROGMEM const char IMM[] = "\xf"                                \
-    ":  " "VAR" "VAL" "PCI" "TMI" "HEX" "DEC" "FGT" "WRD" "DMP" \
-    "SEE" "SAV" "LD " "SEX" "BYE";
+    ":  " "VAL" "VAR" "PCI" "TMI" "HEX" "DEC" "SEX" "SAV" "LD " \
+    "FGT" "DMP" "SEE" "WRD" "BYE";
     // TODO: "s\" "
 PROGMEM const char JMP[] = "\x0b" \
-    ";  " "IF " "ELS" "THN" "BGN" "UTL" "WHL" "RPT" "I  " "FOR" \
-    "NXT";
+    "THN" "ELS" "IF " "RPT" "UTL" "WHL" "BGN" "NXT" "I  " "FOR" \
+    ";  ";
 
 #define N4_WORDS \
-    "NOP" "DRP" "DUP" "SWP" "OVR" "ROT" "+  " "-  " "*  " "/  " \
-    "MOD" "NEG" "AND" "OR " "XOR" "NOT" "LSH" "RSH" "=  " "<  " \
-    ">  " "<> " "@  " "!  " "C@ " "C! " "KEY" "EMT" "CR " ".  " \
-    ".\" "">R " "R> " "HRE" "RND" "ALO" "TRC" "CLK" "D+ " "D- " \
-    "DNG" "ABS" "MAX" "MIN" "DLY" "IN " "AIN" "OUT" "PWM" "PIN" \
-    "TME" "PCE" "API"
+    "NOP" "DRP" "DUP" "SWP" "OVR" "ROT" "MOD" "/  " "*  " "-  " \
+    "+  " "NEG" "XOR" "OR " "AND" "NOT" "LSH" "RSH" "MAX" "MIN" \
+    "ABS" "RND" "=  " "<  " ">  " "<> " "KEY" "EMT" "CR " ".  " \
+    ".\" ""S\" ""TYP" "TRC" "HRE" ">R " "R> " "!  " "@  " "C! " \
+    "C@ " "ALO" "DNG" "D- " "D+ " "CLK" "DLY" "PWM" "OUT" "AIN" \
+    "IN " "PIN" "PCE" "TME" "API"
 
 PROGMEM const char PRM[] =
 #if N4_DOES_META
-    "\x3b" N4_WORDS "CRE" ",  " "C, " "'  " "EXE" "DO>";
+    "\x3d" N4_WORDS "EXE" "'  " "DO>" "CRE" ",  " "C, ";
 #else
-    "\x35" N4_WORDS;
+    "\x37" N4_WORDS;
 #endif // N4_DOES_META
 
 PROGMEM const char PMX[] = "\x2" "I  " "FOR";
@@ -139,44 +139,44 @@ void _add_word()
 void _add_branch(U8 op)
 {
     switch (op) {
-    case 0: /* ; */
-        ENC8(here, PRM_OPS | I_RET);    // semi colon, mark end of a colon word
+    case 0: /* THN */
+        JMPSET(RPOP(), here);           // update A2 with current addr
         break;
-    case 1: /* IF */
-        RPUSH(IDX(here));               // save current here A1
-        JMP00(OP_CDJ);                  // alloc addr with jmp_flag
-        break;
-    case 2: /* ELS */
+    case 1: /* ELS */
         JMPSET(RPOP(), here+2);         // update A1 with next addr
         RPUSH(IDX(here));               // save current here A2
         JMP00(OP_UDJ);                  // alloc space with jmp_flag
         break;
-    case 3: /* THN */
-        JMPSET(RPOP(), here);           // update A2 with current addr
-        break;
-    case 4: /* BGN */
+    case 2: /* IF */
         RPUSH(IDX(here));               // save current here A1
+        JMP00(OP_CDJ);                  // alloc addr with jmp_flag
         break;
-    case 5: /* UTL */
+    case 3: /* RPT */
+        JMPSET(RPOP(), here+2);         // update A2 with next addr
+        JMPTO(RPOP(), OP_UDJ);          // unconditional jump back to A1
+        break;
+    case 4: /* UTL */
         JMPTO(RPOP(), OP_CDJ);          // conditional jump back to A1
         break;
-    case 6: /* WHL */
+    case 5: /* WHL */
         RPUSH(IDX(here));               // save WHILE addr A2
         JMP00(OP_CDJ);                  // allocate branch addr A2 with jmp flag
         break;
-    case 7: /* RPT */
-        JMPSET(RPOP(), here+2);         // update A2 with next addr
-        JMPTO(RPOP(), OP_UDJ);          // unconditional jump back to A1
+    case 6: /* BGN */
+        RPUSH(IDX(here));               // save current here A1
+        break;
+    case 7: /* NXT */
+        RPUSH(IDX(here+1));             // save current addr A1
+        ENC8(here, PRM_OPS | I_FOR);    // encode FOR opcode
         break;
     case 8: /* I */
         ENC8(here, PRM_OPS | I_I);      // fetch loop counter
         break;
     case 9: /* FOR */
-        RPUSH(IDX(here+1));             // save current addr A1
-        ENC8(here, PRM_OPS | I_FOR);    // encode FOR opcode
-        break;
-    case 10: /* NXT */
         JMPTO(RPOP(), OP_NXT);          // loop back to A1
+        break;
+    case 10: /* ; */
+        ENC8(here, PRM_OPS | I_RET);    // semi colon, mark end of a colon word
         break;
     }
 }
@@ -358,7 +358,9 @@ void compile(IU *rp0)
             break;
         case TKN_PRM:                       ///>> a built-in primitives?
             ENC8(here, PRM_OPS | (U8)tmp);  /// * add found primitive opcode
-            if (tmp==I_DQ) _add_str();      /// * do extra, if it's a ." (dot_string) command
+            if (tmp==I_DQ || tmp==I_SQ) {   /// * do extra, if it's a ." (dot_string) or S" (do_string) command
+                _add_str();
+            }
             break;
         case TKN_NUM:                       ///>> a literal (number)?
             if (tmp < 128) {
