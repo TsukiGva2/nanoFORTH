@@ -110,7 +110,7 @@ U8 _find(U8 *tkn, IU *adr)
         if (uc(p[2])==uc(tkn[0]) &&
             uc(p[3])==uc(tkn[1]) &&
             (p[3]==' ' || uc(p[4])==uc(tkn[2]))) {
-            *adr = IDX(p);
+            *adr = IDX(p);         /// * return offset of dic
             return 1;
         }
     }
@@ -122,8 +122,10 @@ U8 _find(U8 *tkn, IU *adr)
 void _add_word()
 {
     U8 *tkn = get_token();          ///#### fetch one token from console
-    IU tmp  = IDX(last);            // link to previous word
-
+    IU tmp;                         // link to previous word
+    if (_find(tkn, &tmp)) show("reDef?\n");
+    
+    tmp  = IDX(last);
     last = here;                    ///#### create 3-byte name field
     ENCA(here, tmp);                // lfa: pointer to previous word
     ENC8(here, tkn[0]);             // nfa: store token into 3-byte name field
@@ -197,6 +199,7 @@ void _add_str()
 void _list_voc(U16 n)
 {
     const char *lst[] PROGMEM = { IMM, JMP, PRM };      // list of built-in primitives
+    d_chr('\n');
     for (U8 i=0; i<3; i++) {
 #if ARDUINO
         U8 sz = pgm_read_byte(reinterpret_cast<PGM_P>(lst[i]));
@@ -461,7 +464,7 @@ void forget()
     ///
     /// word found, rollback here
     ///
-    U8 *lfa = DIC(xt - 2 - 3);         ///< pointer to word's link
+    U8 *lfa = DIC(xt - sizeof(IU) - 3);///< pointer to word's link
     last    = DIC(GETA(lfa));          /// * reset last word address
     here    = lfa;                     /// * reset current pointer
 }
@@ -470,25 +473,31 @@ void forget()
 ///
 void see()
 {
+#if TRC_LEVEL > 0    
     IU xt = query();                   ///< cfa of word
-    if (!xt) return;                   /// * bail if word not found
+    if (!xt) return;                   /// * not found in colon words
     ///
     /// word found, walk parameter field
     ///
-    d_chr('\n');
+    U8 *n = DIC(xt - 3);               ///< pointer to word's name
+    d_chr(':'); d_chr(*n++); d_chr(*n++); d_chr(*n); d_chr('\n');
     for (U8 ir = *DIC(xt); ir != (PRM_OPS|I_NOP); ir = *DIC(xt)) {
         d_chr(' '); d_chr(' ');
         xt = trace(xt, ir, '\n');
     }
     d_adr(xt); show("_; ");
+#else  // !TRC_LEVEL > 0
+    show("NA");   
+#endif // TRC_LEVEL > 0    
 }
 ///
 ///> execution tracer (debugger, can be modified into single-stepper)
 ///
 IU trace(IU a, U8 ir, char delim)
 {
+#if TRC_LEVEL > 0
     d_adr(a);                                         // opcode address
-
+    
     switch (ir & CTL_BITS) {
     case JMP_OPS: {                                   ///> is a jump instruction?
         IU w = GETA(DIC(a)) & ADR_MASK;               // target address
@@ -527,7 +536,10 @@ IU trace(IU a, U8 ir, char delim)
             a += *p;
         } break;
         case I_I:
-        case I_FOR: d_name(ir-I_I, PMX, 0); break;
+        case I_FOR:
+            d_chr('_');
+            d_name(ir-I_I, PMX, 0);
+            break;
         case I_LIT: {                                 // 3-byte literal (i.e. 16-bit signed integer)
             U8 *p = DIC(a)+1;                         // address to the 16-bit number
             DU w  = FETCH(p);                         // fetch the number
@@ -546,6 +558,8 @@ IU trace(IU a, U8 ir, char delim)
         a++;           
     }
     d_chr(delim ? delim : ' ');
+    
+#endif // TRC_LEVEL > 0    
     return a;
 }
 

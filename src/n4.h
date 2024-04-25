@@ -22,8 +22,8 @@
 #define __SRC_N4_H
 
 #define APP_NAME          "\nnanoForth 2.2 "
-#define N4_API_SZ         8       /**< C API function pointer slots */
-#define TRC_LEVEL         0       /**< tracing verbosity level      */
+#define N4_API_SZ         8       /**< C API fptr slots    */
+#define TRC_LEVEL         1       /**< SEE and debug level */
 
 ///@name Arduino Console Output Support
 ///@{
