@@ -164,20 +164,13 @@ IU _invoke(U8 op, IU xt=0)
 
     DISPATCH(op) {                 // switch(op) or goto *vt[op]
     ///> stack ops
-    CODE(0,  xt = RPOP());         // ___, handled at upper level
-    CODE(1,  trc = POP());         // TRC
-    CODE(2,                        // ROT
-        DU x = SS(2);
-        SS(2) = SS(1);
-        SS(1) = TOS;
-        TOS   = x);
-    CODE(3,  PUSH(SS(1)));         // OVR
-    CODE(4,                        // SWP
-        DU x = SS(1);
-        SS(1) = TOS;
-        TOS   = x);
-    CODE(5,  PUSH(TOS));           // DUP
-    CODE(6,  POP());               // DRP
+    CODE(0,  xt = RPOP());                          // ___
+    CODE(1,  trc = POP());                          // TRC
+    CODE(2,  DU x = SS(2); SS(2) = SS(1); TOS = x); // ROT
+    CODE(3,  PUSH(SS(1)));                          // OVR
+    CODE(4,  DU x = SS(1); SS(1) = TOS;   TOS = x); // SWP
+    CODE(5,  PUSH(TOS));                            // DUP
+    CODE(6,  POP());                                // DRP
     ///> Bit-wise ops
     CODE(7,  TOS <<= POP());                        // LSH
     CODE(8,  DU n = POP(); TOS = (U16)TOS >> n);    // RSH
@@ -206,9 +199,7 @@ IU _invoke(U8 op, IU xt=0)
     CODE(28, d_chr((U8)POP()));                     // EMT
     CODE(29, d_chr('\n'));                          // CR
     CODE(30, d_num(POP()); d_chr(' '));             // .
-    CODE(31,                                        // ."
-         d_str(DIC(xt));                            //   display string
-         xt += *DIC(xt) + 1);                       //   skip over the string
+    CODE(31, d_str(DIC(xt)); xt += *DIC(xt) + 1);   // ."
     CODE(32,                                        // .S
          PUSH(xt);                                  //   string pointer
          PUSH(*DIC(xt));                            //   strlen
@@ -240,21 +231,19 @@ IU _invoke(U8 op, IU xt=0)
     CODE(54, NanoForth::call_api(POP()));           // API
 #if N4_DOES_META
     ///> meta programming (for advance users)
-    CODE(55,                          // DO>
-         N4Asm::does(xt);
-         xt = LFA_END);               //   bail
-    CODE(56, N4Asm::create());        // CRE, create a word (header only)
-    CODE(57, _nest(POP()));           // EXE  execute a given parameter field
-    CODE(58, PUSH(N4Asm::query()));   // '    tick, get parameter field of a word
-    CODE(59, N4Asm::comma(POP()));    // ,    comma, add a 16-bit value onto dictionary
-    CODE(60, N4Asm::ccomma(POP()));   // C,   C-comma, add a 8-bit value onto dictionary
+    CODE(55, N4Asm::does(xt); xt = LFA_END);        // DO>
+    CODE(56, N4Asm::create());          // CRE, create a word (header only)
+    CODE(57, _nest(POP()));             // EXE  execute a given parameter field
+    CODE(58, PUSH(N4Asm::query()));     // '    tick, get parameter field of a word
+    CODE(59, N4Asm::comma(POP()));      // ,    comma, add a 16-bit value onto dictionary
+    CODE(60, N4Asm::ccomma(POP()));     // C,   C-comma, add a 8-bit value onto dictionary
 #endif // N4_DOES_META
-    CODE(61, PUSH(*(vm.rp - 1)));     // 62, I
-    CODE(62, RPUSH(POP()));           // 61, FOR
-    CODE(63,                          // 63, LIT
-         DU v = FETCH(DIC(xt));       //   fetch the literal
-         PUSH(v);                     //   put the value on TOS
-         xt += sizeof(DU));           //   skip over the 16-bit literal
+    CODE(61, PUSH(*(vm.rp - 1)));       // I
+    CODE(62, RPUSH(POP()));             // FOR
+    CODE(63,                            // LIT
+         DU v = FETCH(DIC(xt));         //   fetch the literal
+         PUSH(v);                       //   put the value on TOS
+         xt += sizeof(DU));             //   skip over the 16-bit literal
     }
     return xt;
 }
@@ -265,36 +254,37 @@ void _nest(IU xt)
 {
     RPUSH(LFA_END);                     // enter function call
     while (xt != LFA_END) {             ///> walk through instruction sequences
-        U8 op = *DIC(xt);               // fetch instruction
+        U8 op  = *DIC(xt);              ///< fetch instruction
+        U8 opx = op & CTL_BITS;         ///< masked opcode
 #if TRC_LEVEL > 1        
         if (trc) N4Asm::trace(xt, op);  // execution tracing when enabled
 #endif // TRC_LEVEL > 1
-        if ((op & CTL_BITS)==JMP_OPS) { ///> determine control bits
+        if (opx==JMP_OPS) {             ///> branching opcodes?
             IU w = (((IU)op<<8) | *DIC(xt+1)) & ADR_MASK; // target address
-            switch (op & JMP_MASK) {                      // get branch opcode
-            case OP_CALL:                                 // 0xc0 subroutine call
-                serv_isr();                               // loop-around every 256 ops
-                RPUSH(xt + sizeof(IU));                   // keep next instruction on return stack
-                xt = w;                                   // jump to subroutine till I_NOP
+            switch (op & JMP_MASK) {    // get branch opcode
+            case OP_CALL:               // 0xc0 subroutine call
+                serv_isr();             // loop-around every 256 ops
+                RPUSH(xt + sizeof(IU)); // keep next instruction on return stack
+                xt = w;                 // jump to subroutine till I_NOP
                 break;
             case OP_CDJ: xt = POP() ? xt + sizeof(IU) : w; break;  // 0xd0 conditional jump
-            case OP_UDJ: xt = w; break;                   // 0xe0 unconditional jump
-            case OP_NXT:                                  // 0xf0 FOR...NXT
-                if (!--(*(vm.rp-1))) {                    // decrement counter *(rp-1)
-                    xt += sizeof(IU);                     // break loop
-                    RPOP();                               // pop off loop index
+            case OP_UDJ: xt = w; break; // 0xe0 unconditional jump
+            case OP_NXT:                // 0xf0 FOR...NXT
+                if (!--(*(vm.rp-1))) {  // decrement counter *(rp-1)
+                    xt += sizeof(IU);   // break loop
+                    RPOP();             // pop off loop index
                 }
-                else xt = w;                              // loop back
-                serv_isr();                               // loop-around every 256 ops
+                else xt = w;            // loop back
+                serv_isr();             // loop-around every 256 ops
                 break;
             }
         }
-        else if ((op & CTL_BITS)==PRM_OPS) {              ///> handle primitive word
-            xt = _invoke(op & PRM_MASK, ++xt);            // advance one byte opcode
+        else if (opx==PRM_OPS) {        ///> primitive word?
+            xt = _invoke(op & PRM_MASK, ++xt); // advance one byte opcode
         }
-        else {                                            ///> handle number (1-byte literal)
+        else {                          ///> handle number (1-byte literal)
             xt++;
-            PUSH(op);                                     // put the 7-bit literal on TOS
+            PUSH(op);                   // put the 7-bit literal on TOS
         }
     }
 }
