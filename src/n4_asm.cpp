@@ -177,7 +177,7 @@ void _add_branch(U8 op)
         ENC8(here, PRM_OPS | I_FOR);    // encode FOR opcode
         break;
     case 10: /* ; */
-        ENC8(here, PRM_OPS | I_RET);    // semi colon, mark end of a colon word
+        ENC8(here, PRM_OPS | I_NOP);    // semi colon, mark end of a colon word
         break;
     }
 }
@@ -350,7 +350,7 @@ void compile(IU *rp0)
         switch(parse(tkn, &tmp, 0)) {       ///>> **determine type of operation, and keep opcode in tmp**
         case TKN_IMM:                       ///>> an immediate command?
             _add_branch(tmp);               /// * add branching opcode
-            if (tmp==I_RET) {
+            if (tmp==I_SEM) {               /// * semi-colon i.e. end of word
                 tkn = NULL;                 /// * clear token to exit compile mode
                 if (trc) d_mem(dic, last, (IU)(here-last), ' ');  ///> debug memory dump, if enabled
             }
@@ -397,19 +397,19 @@ void create() {                             ///> create a word header (link + na
         ENC8(here, PRM_OPS | I_LIT);
         ENCA(here, tmp);
     }
-    ENC8(here, PRM_OPS | I_RET);
+    ENC8(here, PRM_OPS | I_NOP);
 }
 void comma(DU v)  { STORE(here, v); }      ///> compile a 16-bit value onto dictionary
 void ccomma(DU v) { ENC8(here, v);  }      ///> compile a 16-bit value onto dictionary
 void does(IU xt)  {                        ///> metaprogrammer (jump to definding word DO> section)
 #if N4_DOES_META
     U8 *p = here - 1;                      /// start walking back
-    for (; *p!=(PRM_OPS|I_RET); p--) {     /// shift down parameters by 2 bytes
+    for (; *p!=(PRM_OPS|I_NOP); p--) {     /// shift down parameters by 2 bytes
         *(p+sizeof(DU)) = *p;
     }
     *(p-1) += sizeof(IU);                  /// adjust the PFA
-    ENCA(p, xt | (OP_UDJ << 8));           /// replace RET with a JMP,
-    ENC8(p, PRM_OPS|I_RET);                /// and a RET, (not necessary but nice to SEE)
+    ENCA(p, xt | (OP_UDJ << 8));           /// replace NOP with a JMP,
+    ENC8(p, PRM_OPS|I_NOP);                /// and a NOP, (not necessary but nice to SEE)
     here += sizeof(IU);                    /// extra 2 bytes due to shift
 #endif // N4_DOES_META
 }
@@ -436,7 +436,7 @@ void constant(DU v)
         ENC8(here, PRM_OPS | I_LIT);        ///> or, constant stored as 3-byte literal 
         STORE(here, v);
     }
-    ENC8(here, PRM_OPS | I_RET);
+    ENC8(here, PRM_OPS | I_NOP);
 }
 ///
 ///> display words in dictionary
@@ -478,7 +478,7 @@ void see()
     /// word found, walk parameter field
     ///
     d_chr('\n');
-    for (U8 ir = *DIC(xt); ir != (PRM_OPS|I_RET); ir = *DIC(xt)) {
+    for (U8 ir = *DIC(xt); ir != (PRM_OPS|I_NOP); ir = *DIC(xt)) {
         xt = trace(xt, ir, '\n');
     }
     d_adr(xt); show("_; ");
@@ -517,7 +517,7 @@ IU trace(IU a, U8 ir, char delim)
     case PRM_OPS: {                                   ///> is a primitive?
         ir &= PRM_MASK;                               // capture primitive opcode
         switch (ir) {
-        case I_RET:
+        case I_NOP:                                   // ; end-of-word
             d_chr('_'); d_chr(';');
             tab -= tab ? 1 : 0;
             break;
