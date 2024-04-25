@@ -21,10 +21,22 @@
 #ifndef __SRC_N4_H
 #define __SRC_N4_H
 
-#define APP_NAME          "\nnanoForth 2.2 "
-#define N4_API_SZ         8       /**< C API fptr slots    */
-#define TRC_LEVEL         1       /**< SEE and debug level */
-
+#define APP_NAME  "\nnanoForth 2.2 "
+///
+/// @Note 1:
+///   N4_API_SZ defines C funcion pointer slots which take 2 bytes each
+///   The number can be increased if more interfaces are needed
+/// @Note 2:
+///   TRC_LEVEL set tracing level
+///     0 - no tracing, N4Asm::see, N4Asm::trace, and N4VM::_dump
+///     1 - detailed tracing info of the above
+///     2 - add execution tracing, N4VM::_nest (slower)
+///   The above codes takes extra 1.8K bytes which can be disabled
+///   if extra program memory is needed
+///
+#define N4_API_SZ 8       /**< C API func ptr slots  */
+#define TRC_LEVEL 0       /**< SEE and tracing level */
+///
 ///@name Arduino Console Output Support
 ///@{
 #if ARDUINO
