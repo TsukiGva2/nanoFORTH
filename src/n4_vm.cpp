@@ -232,10 +232,10 @@ void _invoke(U8 op)
     CODE(54, NanoForth::call_api(POP()));           // API
 #if N4_DOES_META
     ///> meta programming (for advance users)
-    CODE(55, _nest(POP()));           // EXE  execute a given parameter field
-    CODE(56, PUSH(N4Asm::query()));   // '    tick, get parameter field of a word
-    CODE(57, {});                     // DO> needs xt, handled in _nest()
-    CODE(58, N4Asm::create());        // CRE, create a word (header only)
+    CODE(55, {});                     // DO> needs xt, handled in _nest()
+    CODE(56, N4Asm::create());        // CRE, create a word (header only)
+    CODE(57, _nest(POP()));           // EXE  execute a given parameter field
+    CODE(58, PUSH(N4Asm::query()));   // '    tick, get parameter field of a word
     CODE(59, N4Asm::comma(POP()));    // ,    comma, add a 16-bit value onto dictionary
     CODE(60, N4Asm::ccomma(POP()));   // C,   C-comma, add a 8-bit value onto dictionary
 #endif // N4_DOES_META
@@ -263,7 +263,7 @@ void _nest(IU xt)
             case OP_CALL:                                 // 0xc0 subroutine call
                 serv_isr();                               // loop-around every 256 ops
                 RPUSH(xt + sizeof(IU));                   // keep next instruction on return stack
-                xt = w;                                   // jump to subroutine till I_RET
+                xt = w;                                   // jump to subroutine till I_NOP
                 break;
             case OP_CDJ: xt = POP() ? xt + sizeof(IU) : w; break;  // 0xd0 conditional jump
             case OP_UDJ: xt = w; break;                   // 0xe0 unconditional jump
@@ -281,7 +281,7 @@ void _nest(IU xt)
             xt++;                                         // advance 1 (primitive token)
             op &= PRM_MASK;                               // get primitive opcode
             switch(op) {
-            case I_RET: xt = RPOP();     break;           // POP return address
+            case I_NOP: xt = RPOP();     break;           // EXIT, POP return address
             case I_LIT: {                                 // 3-byte literal
                 DU v = FETCH(DIC(xt));                    // fetch the literal
                 PUSH(v);                                  // put the value on TOS

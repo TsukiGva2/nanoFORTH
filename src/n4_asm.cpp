@@ -56,7 +56,7 @@ PROGMEM const char JMP[] = "\x0b" \
 
 PROGMEM const char PRM[] =
 #if N4_DOES_META
-    "\x3d" N4_WORDS "EXE" "'  " "DO>" "CRE" ",  " "C, ";
+    "\x3d" N4_WORDS "DO>" "CRE" "EXE" "'  " ",  " "C, ";
 #else
     "\x37" N4_WORDS;
 #endif // N4_DOES_META
@@ -479,6 +479,7 @@ void see()
     ///
     d_chr('\n');
     for (U8 ir = *DIC(xt); ir != (PRM_OPS|I_NOP); ir = *DIC(xt)) {
+        d_chr(' '); d_chr(' ');
         xt = trace(xt, ir, '\n');
     }
     d_adr(xt); show("_; ");
