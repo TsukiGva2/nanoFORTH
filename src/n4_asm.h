@@ -50,7 +50,8 @@ constexpr U8  OP_NXT   = 0xf0;   ///< 1111 0000
 /// opcodes for loop control (in compiler mode)
 ///
 enum N4_EXT_OP {                 ///< extended opcode (used by for...nxt loop)
-    I_RET  = 0,                  ///< hidden opcode
+    I_NOP  = 0,                  ///< NOP means EXIT
+    I_SEM  = 10,                 ///< ; semi-colon
     I_DQ   = 30,                 ///< ." dot_string
     I_SQ   = 31,                 ///< S" do_string
     I_DO   = 57,                 ///< DO>
