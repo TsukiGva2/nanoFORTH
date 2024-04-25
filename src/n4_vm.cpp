@@ -252,11 +252,9 @@ void _nest(IU xt)
     RPUSH(LFA_END);                                       // enter function call
     while (xt != LFA_END) {                               ///> walk through instruction sequences
         U8 op = *DIC(xt);                                 // fetch instruction
-
-#if    TRC_LEVEL > 0
+#if TRC_LEVEL > 1        
         if (trc) N4Asm::trace(xt, op);                    // execution tracing when enabled
-#endif // TRC_LEVEL
-
+#endif // TRC_LEVEL > 1        
         if ((op & CTL_BITS)==JMP_OPS) {                   ///> determine control bits
             IU w = (((IU)op<<8) | *DIC(xt+1)) & ADR_MASK; // target address
             switch (op & JMP_MASK) {                      // get branch opcode
