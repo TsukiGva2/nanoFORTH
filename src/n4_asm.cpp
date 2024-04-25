@@ -84,6 +84,7 @@ PROGMEM const char PMX[] = "\x2" "I  " "FOR";
 ///
 ///@name Dictionary Index <=> Pointer Converter
 ///@{
+#define XT(a)          ((a)+2+3)                   /**< exeution token = addr+link(2)+name(3)        */
 #define DIC(n)         ((U8*)dic + (n))            /**< convert dictionary index to a memory pointer */
 #define IDX(p)         ((IU)((U8*)(p) - dic))      /**< convert memory pointer to a dictionary index */
 ///@}
@@ -111,11 +112,9 @@ U8 _find(U8 *tkn, IU *adr)
             uc(p[3])==uc(tkn[1]) &&
             (p[3]==' ' || uc(p[4])==uc(tkn[2]))) {
             *adr = IDX(p);
-			printf("found %x ", *adr);
             return 1;
         }
     }
-	printf("NA ");
     return 0;
 }
 ///
@@ -317,7 +316,7 @@ IU query() {
         show("?!  ");                    /// * not found, bail
         return 0;
     }
-    return adr + 2 + 3;                  /// * xt = adr + lnk[2] + name[3]
+    return XT(adr);                      /// * xt = adr + lnk[2] + name[3]
 }
 ///
 ///> parse given token into actionable item
@@ -327,6 +326,7 @@ N4OP parse(U8 *tkn, IU *rst, U8 run)
     if (_find(tkn, rst))                 return TKN_WRD; /// * WRD - is a colon word? [lnk(2),name(3)]
     if (scan(tkn, run ? IMM : JMP, rst)) return TKN_IMM; /// * IMM - is a immediate word?
     if (scan(tkn, PRM, rst))             return TKN_PRM; /// * PRM - is a primitives?
+    printf("NA ");
     if (number(tkn, (DU*)rst))           return TKN_NUM; /// * NUM - is a number literal?
     return TKN_ERR;                                      /// * ERR - unknown token
 }
@@ -356,7 +356,7 @@ void compile(IU *rp0)
             }
             break;
         case TKN_WRD:                       ///>> a colon word? [addr + lnk(2) + name(3)]
-            JMPTO(tmp+2+3, OP_CALL);        /// * call subroutine
+            JMPTO(XT(tmp), OP_CALL);        /// * call subroutine
             break;
         case TKN_PRM:                       ///>> a built-in primitives?
             ENC8(here, PRM_OPS | (U8)tmp);  /// * add found primitive opcode
@@ -388,13 +388,12 @@ void compile(IU *rp0)
 ///
 void create() {                             ///> create a word header (link + name field)
     _add_word();                            /// **fetch token, create name field linked to previous word**
-
-    U8 tmp = IDX(here+2);                   // address to variable storage
-    if (tmp < 128) {                        ///> handle 1-byte address + RET(1)
+    IU tmp = IDX(here + sizeof(IU));        ///< address to variable storage
+    if (tmp < 128) {                        ///> 1-byte literal
         ENC8(here, (U8)tmp);
     }
     else {
-        tmp += 2;                           ///> or, extra bytes for 16-bit address
+        tmp += sizeof(DU);                  ///> or, 3-byte literal
         ENC8(here, PRM_OPS | I_LIT);
         ENCA(here, tmp);
     }
@@ -404,12 +403,14 @@ void comma(DU v)  { STORE(here, v); }      ///> compile a 16-bit value onto dict
 void ccomma(DU v) { ENC8(here, v);  }      ///> compile a 16-bit value onto dictionary
 void does(IU xt)  {                        ///> metaprogrammer (jump to definding word DO> section)
 #if N4_DOES_META
-	U8 *p = here - 1;                               /// start walking back
-    for (; *p!=(PRM_OPS|I_RET); p--) *(p+2) = *p;   /// shift down parameters by 2 bytes
-    *(p-1) += 2;                                    /// adjust the PFA
-    ENCA(p, xt | (OP_UDJ << 8));                    /// replace RET with a JMP,
-	ENC8(p, PRM_OPS|I_RET);                         /// and a RET, (not necessary but nice to SEE)
-	here += 2;                                      /// extra 2 bytes due to shift
+    U8 *p = here - 1;                      /// start walking back
+    for (; *p!=(PRM_OPS|I_RET); p--) {     /// shift down parameters by 2 bytes
+        *(p+sizeof(DU)) = *p;
+    }
+    *(p-1) += sizeof(IU);                  /// adjust the PFA
+    ENCA(p, xt | (OP_UDJ << 8));           /// replace RET with a JMP,
+    ENC8(p, PRM_OPS|I_RET);                /// and a RET, (not necessary but nice to SEE)
+    here += sizeof(IU);                    /// extra 2 bytes due to shift
 #endif // N4_DOES_META
 }
 ///
@@ -419,7 +420,7 @@ void does(IU xt)  {                        ///> metaprogrammer (jump to defindin
 void variable()
 {
     create();
-    STORE(here, 0);                        /// add actual literal storage area
+    STORE(here, 0);                         /// add actual literal storage area
 }
 ///
 ///> create a constant on dictionary
@@ -428,7 +429,6 @@ void variable()
 void constant(DU v)
 {
     _add_word();                            /// **fetch token, create name field linked to previous word**
-
     if (v < 128) {                          ///> handle 1-byte constant
         ENC8(here, (U8)v);
     }
@@ -499,10 +499,10 @@ IU trace(IU a, U8 ir, char delim)
             d_chr(':');
             d_chr(*p++); d_chr(*p++); d_chr(*p);
             if (!delim) {
-	            show("\n....");
-    	        for (int i=0, n=++tab; i<n; i++) {    // indentation per call-depth
-        	        show("  ");
-	            }
+                show("\n....");
+                for (int i=0, n=++tab; i<n; i++) {    // indentation per call-depth
+                    show("  ");
+                }
             }
         } break;
         case OP_CDJ: d_chr('?'); d_adr(w); break;     // 0xd0 CDJ  conditional jump
@@ -515,29 +515,30 @@ IU trace(IU a, U8 ir, char delim)
         a+=2;                                         // skip over address
     } break;
     case PRM_OPS: {                                   ///> is a primitive?
-    	ir &= PRM_MASK;                               // capture primitive opcode
+        ir &= PRM_MASK;                               // capture primitive opcode
         switch (ir) {
         case I_RET:
-        	d_chr('_'); d_chr(';');
+            d_chr('_'); d_chr(';');
             tab -= tab ? 1 : 0;
             break;
-        case I_LIT: {                                 // 3-byte literal (i.e. 16-bit signed integer)
-            U8 *p = DIC(a)+1;                         // address to the 16-bit number
-            DU w = FETCH(p);                          // fetch the number
-            d_chr('#');
-            d_num(w);
-            a += 2;                                   // skip literal
-        } break;
-        case I_DQ: {                                  // print string
+        case I_DQ: {                                  // ."
             U8 *p = DIC(a)+1;                         // address to string header
             d_chr('"');
             d_str(p);                                 // print the string to console
             a += *p;
         } break;
-        default:                                      // other opcodes
+        case I_I:
+        case I_FOR: d_name(ir-I_I, PMX, 0); break;
+        case I_LIT: {                                 // 3-byte literal (i.e. 16-bit signed integer)
+            U8 *p = DIC(a)+1;                         // address to the 16-bit number
+            DU w  = FETCH(p);                         // fetch the number
+            d_chr('#');
+            d_num(w);
+            a += 2;                                   // skip literal
+        } break;
+        default:                                      // all other opcodes
             d_chr('_');
-            U8 ci = ir >= I_I;                        // loop controller flag
-            d_name(ci ? ir-I_I : ir, ci ? PMX : PRM, 0);
+            d_name(ir, PRM, 0);                       // display primitive words
         }
         a++;
     } break;
