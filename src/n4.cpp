@@ -90,8 +90,14 @@ int main(int argc, char **argv)
 }
 #endif // !ARDUINO
 /*
- * Revision History
+ * Revision History [code size,ms/10K]
  * -----------------
+ *> 2024-04-13: chochain@yahoo.com - v2.2
+ *    [14542,138] add N4Task, IsrRec to reduce intr service time (11ms)
+ *                segment/reorg opcodes for better display
+ *                add word creating words CRE..DO>, ' EXE, comma, ccomma
+ *                add SEE (and trace)
+ *
  *> 2023-05-05: chochain@yahoo.com - v2.1
  *    [13986,139] tune inner loop, isr - (30% faster)
  *                add computed goto 
