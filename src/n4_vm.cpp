@@ -239,8 +239,8 @@ void _invoke(U8 op)
     CODE(59, N4Asm::comma(POP()));    // ,    comma, add a 16-bit value onto dictionary
     CODE(60, N4Asm::ccomma(POP()));   // C,   C-comma, add a 8-bit value onto dictionary
 #endif // N4_DOES_META
-    CODE(61, RPUSH(POP()));           // 61, FOR
-    CODE(62, PUSH(*(vm.rp - 1)));     // 62, I
+    CODE(61, PUSH(*(vm.rp - 1)));     // 62, I
+    CODE(62, RPUSH(POP()));           // 61, FOR
     CODE(63, {});                     // 63, LIT handled at upper level
     }
 }
@@ -340,16 +340,16 @@ void serv_isr() {
 ///
 void outer()
 {
-    ok();                                        ///> console ok prompt if tib is empty
-    U8  *tkn = get_token();                      ///> get a token from console
+    ok();                                   ///> console ok prompt if tib is empty
+    U8  *tkn = get_token();                 ///> get a token from console
     U16 tmp;
-    switch (N4Asm::parse(tkn, &tmp, 1)) {        ///> parse action from token (keep opcode in tmp)
-    case TKN_IMM: _immediate(tmp);      break;   ///>> immediate words,
-    case TKN_WRD: _nest(tmp + 2 + 3);   break;   ///>> execute colon word (user defined)
-    case TKN_PRM: _invoke((U8)tmp);     break;   ///>> execute primitive built-in word,
-    case TKN_NUM: PUSH(tmp);            break;   ///>> push a number (literal) to stack top,
-    case TKN_EXT:                                ///>> extended words, not implemented yet
-    default:                                     ///>> or, error (unknown action)
+    switch (N4Asm::parse(tkn, &tmp, 1)) {   ///> parse action from token (keep opcode in tmp)
+    case TKN_IMM: _immediate(tmp);  break;  ///>> immediate words,
+    case TKN_WRD: _nest(XT(tmp));   break;  ///>> execute colon word (user defined)
+    case TKN_PRM: _invoke((U8)tmp); break;  ///>> execute primitive built-in word,
+    case TKN_NUM: PUSH(tmp);        break;  ///>> push a number (literal) to stack top,
+    case TKN_EXT:                           ///>> extended words, not implemented yet
+    default:                                ///>> or, error (unknown action)
         show("?\n");
     }
 }
