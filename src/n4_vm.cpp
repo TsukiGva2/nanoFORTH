@@ -50,7 +50,7 @@ void _init() {
     IU xt = N4Asm::reset();              /// * reload EEPROM and reset assembler
     if (xt != LFA_END) {                 /// * check autorun addr has been setup? (see SEX)
         show("reset\n");
-        _nest(xt + 2 + 3);               /// * execute last saved colon word in EEPROM
+        _nest(XT(xt));                   /// * execute last saved colon word in EEPROM
     }
 }
 ///
@@ -59,6 +59,7 @@ void _init() {
 #define DUMP_PER_LINE 0x10
 void _dump(IU p0, U16 sz0)
 {
+#if TRC_LEVEL > 0
     U8  *p = DIC(p0 & 0xffe0);
     U16 sz = (sz0 + 0x1f) & 0xffe0;
     d_chr('\n');
@@ -71,6 +72,7 @@ void _dump(IU p0, U16 sz0)
         }
         d_chr('\n');
     }
+#endif // TRC_LEVEL > 0    
 }
 ///
 ///> immediate word handler
@@ -162,51 +164,52 @@ void _invoke(U8 op)
 
     DISPATCH(op) {                 // switch(op) or goto *vt[op]
     ///> stack ops
-    CODE(0,  {});                  // NOP, handled at upper level
-    CODE(1,  POP());               // DRP
-    CODE(2,  PUSH(TOS));           // DUP
-    CODE(3,                        // SWP
-        DU x = SS(1);
-        SS(1) = TOS;
-        TOS   = x);
-    CODE(4,  PUSH(SS(1)));         // OVR
-    CODE(5,                        // ROT
+    CODE(0,  {});                  // ___, handled at upper level
+    CODE(1,  trc = POP());         // TRC
+    CODE(2,                        // ROT
         DU x = SS(2);
         SS(2) = SS(1);
         SS(1) = TOS;
         TOS   = x);
+    CODE(3,  PUSH(SS(1)));         // OVR
+    CODE(4,                        // SWP
+        DU x = SS(1);
+        SS(1) = TOS;
+        TOS   = x);
+    CODE(5,  PUSH(TOS));           // DUP
+    CODE(6,  POP());               // DRP
+    ///> Bit-wise ops
+    CODE(7,  TOS <<= POP());                        // LSH
+    CODE(8,  DU n = POP(); TOS = (U16)TOS >> n);    // RSH
+    CODE(9,  TOS ^= 0xffff);                        // NOT
+    CODE(10, TOS ^= POP());                         // XOR
+    CODE(11, TOS |= POP());                         // OR
+    CODE(12, TOS &= POP());                         // AND
     ///> ALU ops
-    CODE(6,  TOS %= POP());        // MOD
-    CODE(7,  TOS /= POP());        // /
-    CODE(8,  TOS *= POP());        // *
-    CODE(9,  TOS -= POP());        // -
-    CODE(10, TOS += POP());        // +
-    CODE(11, TOS = -TOS);          // NEG
-    CODE(12, TOS ^= POP());        // XOR
-    CODE(13, TOS |= POP());        // OR
-    CODE(14, TOS &= POP());        // AND
-    CODE(15, TOS ^= 0xffff);       // NOT
-    CODE(16, TOS <<= POP());                        // LSH
-    CODE(17, DU n = POP(); TOS = (U16)TOS >> n);    // RSH
-    CODE(18, DU n = POP(); TOS = n>TOS ? n : TOS);  // MAX
-    CODE(19, DU n = POP(); TOS = n<TOS ? n : TOS);  // MIN
-    CODE(20, TOS = TOS > 0 ? TOS : -TOS);           // ABS
-    CODE(21, PUSH(random(POP())));                  // RND
+    CODE(13, PUSH(random(POP())));                  // RND
+    CODE(14, DU n = POP(); TOS = n<TOS ? n : TOS);  // MIN
+    CODE(15, DU n = POP(); TOS = n>TOS ? n : TOS);  // MAX
+    CODE(16, TOS = TOS > 0 ? TOS : -TOS);           // ABS
+    CODE(17, TOS %= POP());                         // MOD
+    CODE(18, TOS = -TOS);                           // NEG
+    CODE(19, TOS /= POP());                         // /
+    CODE(20, TOS *= POP());                         // *
+    CODE(21, TOS -= POP());                         // -
+    CODE(22, TOS += POP());                         // +
     ///> Logical ops
-    CODE(22, TOS = BOOL(POP()==TOS));               // =
-    CODE(23, TOS = BOOL(POP()> TOS));               // <
-    CODE(24, TOS = BOOL(POP()< TOS));               // >
-    CODE(25, TOS = BOOL(POP()!=TOS));               // <>
+    CODE(23, TOS = BOOL(POP()==TOS));               // =
+    CODE(24, TOS = BOOL(POP()> TOS));               // <
+    CODE(25, TOS = BOOL(POP()< TOS));               // >
+    CODE(26, TOS = BOOL(POP()!=TOS));               // <>
     ///> IO ops
-    CODE(26, PUSH((DU)key()));                      // KEY
-    CODE(27, d_chr((U8)POP()));                     // EMT
-    CODE(28, d_chr('\n'));                          // CR
-    CODE(29, d_num(POP()); d_chr(' '));             // .
-    CODE(30, {});                                   // ."  needs xt, handled in _nest()
-    CODE(31, {});                                   // .S  needs xt, handled in _nest()
-    CODE(32, POP(); d_str(DIC(POP())));             // TYP
+    CODE(27, PUSH((DU)key()));                      // KEY
+    CODE(28, d_chr((U8)POP()));                     // EMT
+    CODE(29, d_chr('\n'));                          // CR
+    CODE(30, d_num(POP()); d_chr(' '));             // .
+    CODE(31, {});                                   // ."  needs xt, handled in _nest()
+    CODE(32, {});                                   // .S  needs xt, handled in _nest()
+    CODE(33, POP(); d_str(DIC(POP())));             // TYP
     ///> Compiler ops
-    CODE(33, trc = POP());                          // TRC
     CODE(34, PUSH(IDX(N4Asm::here)));               // HRE
     CODE(35, RPUSH(POP()));                         // >R
     CODE(36, PUSH(RPOP()));                         // R>
@@ -254,7 +257,7 @@ void _nest(IU xt)
         U8 op = *DIC(xt);                                 // fetch instruction
 #if TRC_LEVEL > 1        
         if (trc) N4Asm::trace(xt, op);                    // execution tracing when enabled
-#endif // TRC_LEVEL > 1        
+#endif // TRC_LEVEL > 1
         if ((op & CTL_BITS)==JMP_OPS) {                   ///> determine control bits
             IU w = (((IU)op<<8) | *DIC(xt+1)) & ADR_MASK; // target address
             switch (op & JMP_MASK) {                      // get branch opcode

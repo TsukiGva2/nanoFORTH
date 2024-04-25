@@ -47,10 +47,10 @@ PROGMEM const char JMP[] = "\x0b" \
     ";  ";
 
 #define N4_WORDS \
-    "NOP" "DRP" "DUP" "SWP" "OVR" "ROT" "MOD" "/  " "*  " "-  " \
-    "+  " "NEG" "XOR" "OR " "AND" "NOT" "LSH" "RSH" "MAX" "MIN" \
-    "ABS" "RND" "=  " "<  " ">  " "<> " "KEY" "EMT" "CR " ".  " \
-    ".\" ""S\" ""TYP" "TRC" "HRE" ">R " "R> " "!  " "@  " "C! " \
+    "   " "TRC" "ROT" "OVR" "SWP" "DUP" "DRP" "LSH" "RSH" "NOT" \
+    "XOR" "OR " "AND" "RND" "MIN" "MAX" "ABS" "MOD" "NEG" "/  " \
+    "*  " "-  " "+  " "=  " "<  " ">  " "<> " "KEY" "EMT" "CR " \
+    ".  " ".\" ""S\" ""TYP" "HRE" ">R " "R> " "!  " "@  " "C! " \
     "C@ " "ALO" "DNG" "D- " "D+ " "CLK" "DLY" "PWM" "OUT" "AIN" \
     "IN " "PIN" "PCE" "TME" "API"
 
@@ -199,7 +199,6 @@ void _add_str()
 void _list_voc(U16 n)
 {
     const char *lst[] PROGMEM = { IMM, JMP, PRM };      // list of built-in primitives
-    d_chr('\n');
     for (U8 i=0; i<3; i++) {
 #if ARDUINO
         U8 sz = pgm_read_byte(reinterpret_cast<PGM_P>(lst[i]));
@@ -451,8 +450,7 @@ void words()
         if (trc) { d_adr(IDX(p)); d_chr(':'); }                  ///>> optionally show address
         d_chr(p[2]); d_chr(p[3]); d_chr(p[4]);                   ///>> 3-char name
     }
-    _list_voc(trc ? n<<1 : n);                                   ///> list built-in vocabularies
-    d_chr('\n');
+    _list_voc(0);   // _list_voc(trc ? n<<1 : n);                ///> list built-in vocabularies
 }
 ///
 ///> drop words from the dictionary
