@@ -35,7 +35,7 @@
 ///   if extra program memory is needed
 ///
 #define N4_API_SZ 8       /**< C API func ptr slots  */
-#define TRC_LEVEL 0       /**< SEE and tracing level */
+#define TRC_LEVEL 1       /**< SEE and tracing level */
 ///
 ///@name Arduino Console Output Support
 ///@{
