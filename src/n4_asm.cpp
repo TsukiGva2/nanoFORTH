@@ -84,7 +84,6 @@ PROGMEM const char PMX[] = "\x2" "I  " "FOR";
 ///
 ///@name Dictionary Index <=> Pointer Converter
 ///@{
-#define XT(a)          ((a)+2+3)                   /**< exeution token = addr+link(2)+name(3)        */
 #define DIC(n)         ((U8*)dic + (n))            /**< convert dictionary index to a memory pointer */
 #define IDX(p)         ((IU)((U8*)(p) - dic))      /**< convert memory pointer to a dictionary index */
 ///@}
@@ -326,7 +325,6 @@ N4OP parse(U8 *tkn, IU *rst, U8 run)
     if (_find(tkn, rst))                 return TKN_WRD; /// * WRD - is a colon word? [lnk(2),name(3)]
     if (scan(tkn, run ? IMM : JMP, rst)) return TKN_IMM; /// * IMM - is a immediate word?
     if (scan(tkn, PRM, rst))             return TKN_PRM; /// * PRM - is a primitives?
-    printf("NA ");
     if (number(tkn, (DU*)rst))           return TKN_NUM; /// * NUM - is a number literal?
     return TKN_ERR;                                      /// * ERR - unknown token
 }
