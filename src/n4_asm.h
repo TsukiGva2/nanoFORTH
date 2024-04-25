@@ -15,9 +15,18 @@
 #ifndef __SRC_N4_ASM_H
 #define __SRC_N4_ASM_H
 #include "n4.h"
-
+///
+/// @Note 1:
+///   N4_DOES_META flag enable meta-programming,
+///   it takes 6 opcodes slots i.e. 55~60
+///   can be disabled if other opcodes need the slots
+/// @Note 2:
+///   N4_USE_GOTO flag use computed goto for primitive word invocation,
+///   speeds up 5%, but takes extra 128 bytes of RAM,
+///   can be disabled if some library needs extra memory 
+///
 #define N4_DOES_META  1 /**< enable meta programming */
-#define N4_USE_GOTO   1 /**< use computed goto (use 128 byte RAM, speed up 65ms/100K */
+#define N4_USE_GOTO   1 /**< use computed goto       */
 ///
 /// parser actions enum used by execution and assembler units
 ///

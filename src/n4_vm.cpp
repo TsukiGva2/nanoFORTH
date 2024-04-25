@@ -92,20 +92,20 @@ void _immediate(U16 op)
             N4Intr::add_tmisr(
                 op, POP(),
                 N4Asm::query());        break;   /// * period in multiply of 10ms
-        ///> numeric radix
-        case 5: set_hex(1);             break;   /// * HEX
-        case 6: set_hex(0);             break;   /// * DEC
         ///> system
-        case 7: N4Asm::save(1);         break;   /// * SEX - save/execute (autorun)
-        case 8: N4Asm::save();          break;   /// * SAV
-        case 9: N4Asm::load();          break;   /// * LD
+        case 5: N4Asm::save(1);         break;   /// * SEX - save/execute (autorun)
+        case 6: N4Asm::save();          break;   /// * SAV
+        case 7: N4Asm::load();          break;   /// * LD
         ///> dicionary debugging
-        case 10: N4Asm::forget();       break;   /// * FGT, rollback word created
-        case 11:                                 /// * DMP, memory dump
+        case 8: N4Asm::forget();        break;   /// * FGT, rollback word created
+        case 9:                                  /// * DMP, memory dump
             op = POP();
             _dump(POP(), op);           break;
-        case 12: N4Asm::see();          break;   /// * SEE
-        case 13: N4Asm::words();        break;   /// * WRD
+        case 10: N4Asm::see();          break;   /// * SEE
+        case 11: N4Asm::words();        break;   /// * WRD
+        ///> numeric radix
+        case 12: set_hex(0);            break;   /// * DEC
+        case 13: set_hex(1);            break;   /// * HEX
 #if ARDUINO
         case 14: _init();               break;   /// * BYE, restart
 #else
@@ -146,11 +146,11 @@ void _dneg() {
 ///> invoke a built-in opcode
 ///> Note: computed goto takes extra 128-bytes for ~5% faster
 ///
-void _invoke(U8 op)
+IU _invoke(U8 op, IU xt=0)
 {
 #if N4_USE_GOTO                     // defined in n4_asm.h
     #define DISPATCH(op) goto *vt[op];
-    #define CODE(i,g) L_##i: { g; } return
+    #define CODE(i,g) L_##i: { g; } return xt
     #define LL(i) \
         &&L_##i##0,&&L_##i##1,&&L_##i##2,&&L_##i##3,&&L_##i##4, \
         &&L_##i##5,&&L_##i##6,&&L_##i##7,&&L_##i##8,&&L_##i##9
@@ -164,7 +164,7 @@ void _invoke(U8 op)
 
     DISPATCH(op) {                 // switch(op) or goto *vt[op]
     ///> stack ops
-    CODE(0,  {});                  // ___, handled at upper level
+    CODE(0,  xt = RPOP());         // ___, handled at upper level
     CODE(1,  trc = POP());         // TRC
     CODE(2,                        // ROT
         DU x = SS(2);
@@ -206,8 +206,13 @@ void _invoke(U8 op)
     CODE(28, d_chr((U8)POP()));                     // EMT
     CODE(29, d_chr('\n'));                          // CR
     CODE(30, d_num(POP()); d_chr(' '));             // .
-    CODE(31, {});                                   // ."  needs xt, handled in _nest()
-    CODE(32, {});                                   // .S  needs xt, handled in _nest()
+    CODE(31,                                        // ."
+         d_str(DIC(xt));                            //   display string
+         xt += *DIC(xt) + 1);                       //   skip over the string
+    CODE(32,                                        // .S
+         PUSH(xt);                                  //   string pointer
+         PUSH(*DIC(xt));                            //   strlen
+         xt += *DIC(xt) + 1);                       //   skip over str
     CODE(33, POP(); d_str(DIC(POP())));             // TYP
     ///> Compiler ops
     CODE(34, PUSH(IDX(N4Asm::here)));               // HRE
@@ -235,7 +240,9 @@ void _invoke(U8 op)
     CODE(54, NanoForth::call_api(POP()));           // API
 #if N4_DOES_META
     ///> meta programming (for advance users)
-    CODE(55, {});                     // DO> needs xt, handled in _nest()
+    CODE(55,                          // DO>
+         N4Asm::does(xt);
+         xt = LFA_END);               //   bail
     CODE(56, N4Asm::create());        // CRE, create a word (header only)
     CODE(57, _nest(POP()));           // EXE  execute a given parameter field
     CODE(58, PUSH(N4Asm::query()));   // '    tick, get parameter field of a word
@@ -244,21 +251,25 @@ void _invoke(U8 op)
 #endif // N4_DOES_META
     CODE(61, PUSH(*(vm.rp - 1)));     // 62, I
     CODE(62, RPUSH(POP()));           // 61, FOR
-    CODE(63, {});                     // 63, LIT handled at upper level
+    CODE(63,                          // 63, LIT
+         DU v = FETCH(DIC(xt));       //   fetch the literal
+         PUSH(v);                     //   put the value on TOS
+         xt += sizeof(DU));           //   skip over the 16-bit literal
     }
+    return xt;
 }
 ///
 ///> opcode execution unit i.e. inner interpreter
 ///
 void _nest(IU xt)
 {
-    RPUSH(LFA_END);                                       // enter function call
-    while (xt != LFA_END) {                               ///> walk through instruction sequences
-        U8 op = *DIC(xt);                                 // fetch instruction
+    RPUSH(LFA_END);                     // enter function call
+    while (xt != LFA_END) {             ///> walk through instruction sequences
+        U8 op = *DIC(xt);               // fetch instruction
 #if TRC_LEVEL > 1        
-        if (trc) N4Asm::trace(xt, op);                    // execution tracing when enabled
+        if (trc) N4Asm::trace(xt, op);  // execution tracing when enabled
 #endif // TRC_LEVEL > 1
-        if ((op & CTL_BITS)==JMP_OPS) {                   ///> determine control bits
+        if ((op & CTL_BITS)==JMP_OPS) { ///> determine control bits
             IU w = (((IU)op<<8) | *DIC(xt+1)) & ADR_MASK; // target address
             switch (op & JMP_MASK) {                      // get branch opcode
             case OP_CALL:                                 // 0xc0 subroutine call
@@ -279,27 +290,7 @@ void _nest(IU xt)
             }
         }
         else if ((op & CTL_BITS)==PRM_OPS) {              ///> handle primitive word
-            xt++;                                         // advance 1 (primitive token)
-            op &= PRM_MASK;                               // get primitive opcode
-            switch(op) {
-            case I_NOP: xt = RPOP();     break;           // EXIT, POP return address
-            case I_LIT: {                                 // 3-byte literal
-                DU v = FETCH(DIC(xt));                    // fetch the literal
-                PUSH(v);                                  // put the value on TOS
-                xt += sizeof(DU);                         // skip over the 16-bit literal
-            }                            break;
-            case I_DQ:                                    // handle ." (len,byte,byte,...)
-                d_str(DIC(xt));                           // display the string
-                xt += *DIC(xt) + 1;      break;           // skip over the string
-            case I_SQ:                                    // handle S" (len,byte,byte,...) 
-                PUSH(xt);                                 // string pointer
-                PUSH(*DIC(xt));                           // length of string (not used mostly)
-                xt += *DIC(xt) + 1;      break;           // skip over the string
-            case I_DO:                                    // metaprogrammer
-                N4Asm::does(xt);                          // jump to definding word DO> section
-                xt = LFA_END;            break;
-            default: _invoke(op);                         // handle other opcodes
-            }
+            xt = _invoke(op & PRM_MASK, ++xt);            // advance one byte opcode
         }
         else {                                            ///> handle number (1-byte literal)
             xt++;
