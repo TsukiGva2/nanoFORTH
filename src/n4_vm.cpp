@@ -61,6 +61,7 @@ void _dump(IU p0, U16 sz0)
 {
     U8  *p = DIC(p0 & 0xffe0);
     U16 sz = (sz0 + 0x1f) & 0xffe0;
+    d_chr('\n');
     for (U16 i=0; i<sz; i+=DUMP_PER_LINE) {
         d_mem(dic, p, DUMP_PER_LINE, ' ');
         d_chr(' ');
@@ -147,7 +148,7 @@ void _invoke(U8 op)
 {
 #if N4_USE_GOTO                     // defined in n4_asm.h
     #define DISPATCH(op) goto *vt[op];
-    #define _X(i,g)      L_##i: { g; } return
+    #define CODE(i,g) L_##i: { g; } return
     #define LL(i) \
         &&L_##i##0,&&L_##i##1,&&L_##i##2,&&L_##i##3,&&L_##i##4, \
         &&L_##i##5,&&L_##i##6,&&L_##i##7,&&L_##i##8,&&L_##i##9
@@ -156,91 +157,91 @@ void _invoke(U8 op)
     };
 #else  // !N4_USE_GOTO
     #define DISPATCH(op) switch(op)
-    #define _X(i,g)      case i: { g; } break
+    #define CODE(i,g)    case i: { g; } break
 #endif // N4_USE_GOTO
 
-    DISPATCH(op) {                  // switch(op) or goto *vt[op]
+    DISPATCH(op) {                 // switch(op) or goto *vt[op]
     ///> stack ops
-    _X(0,  {});                     // NOP, handled at upper level
-    _X(1,  POP());                  // DRP
-    _X(2,  PUSH(TOS));              // DUP
-    _X(3,                           // SWP
+    CODE(0,  {});                  // NOP, handled at upper level
+    CODE(1,  POP());               // DRP
+    CODE(2,  PUSH(TOS));           // DUP
+    CODE(3,                        // SWP
         DU x = SS(1);
         SS(1) = TOS;
         TOS   = x);
-    _X(4,  PUSH(SS(1)));            // OVR
-    _X(5,                           // ROT
+    CODE(4,  PUSH(SS(1)));         // OVR
+    CODE(5,                        // ROT
         DU x = SS(2);
         SS(2) = SS(1);
         SS(1) = TOS;
         TOS   = x);
     ///> ALU ops
-    _X(6,  TOS %= POP());           // MOD
-    _X(7,  TOS /= POP());           // /
-    _X(8,  TOS *= POP());           // *
-    _X(9,  TOS -= POP());           // -
-    _X(10, TOS += POP());           // +
-    _X(11, TOS = -TOS);             // NEG
-    _X(12, TOS ^= POP());           // XOR
-    _X(13, TOS |= POP());           // OR
-    _X(14, TOS &= POP());           // AND
-    _X(15, TOS ^= 0xffff);          // NOT
-    _X(16, TOS <<= POP());                        // LSH
-    _X(17, DU n = POP(); TOS = (U16)TOS >> n);    // RSH
-    _X(18, DU n = POP(); TOS = n>TOS ? n : TOS);  // MAX
-    _X(19, DU n = POP(); TOS = n<TOS ? n : TOS);  // MIN
-    _X(20, TOS = TOS > 0 ? TOS : -TOS);           // ABS
-    _X(21, PUSH(random(POP())));                  // RND
+    CODE(6,  TOS %= POP());        // MOD
+    CODE(7,  TOS /= POP());        // /
+    CODE(8,  TOS *= POP());        // *
+    CODE(9,  TOS -= POP());        // -
+    CODE(10, TOS += POP());        // +
+    CODE(11, TOS = -TOS);          // NEG
+    CODE(12, TOS ^= POP());        // XOR
+    CODE(13, TOS |= POP());        // OR
+    CODE(14, TOS &= POP());        // AND
+    CODE(15, TOS ^= 0xffff);       // NOT
+    CODE(16, TOS <<= POP());                        // LSH
+    CODE(17, DU n = POP(); TOS = (U16)TOS >> n);    // RSH
+    CODE(18, DU n = POP(); TOS = n>TOS ? n : TOS);  // MAX
+    CODE(19, DU n = POP(); TOS = n<TOS ? n : TOS);  // MIN
+    CODE(20, TOS = TOS > 0 ? TOS : -TOS);           // ABS
+    CODE(21, PUSH(random(POP())));                  // RND
     ///> Logical ops
-    _X(22, TOS = BOOL(POP()==TOS));               // =
-    _X(23, TOS = BOOL(POP()> TOS));               // <
-    _X(24, TOS = BOOL(POP()< TOS));               // >
-    _X(25, TOS = BOOL(POP()!=TOS));               // <>
+    CODE(22, TOS = BOOL(POP()==TOS));               // =
+    CODE(23, TOS = BOOL(POP()> TOS));               // <
+    CODE(24, TOS = BOOL(POP()< TOS));               // >
+    CODE(25, TOS = BOOL(POP()!=TOS));               // <>
     ///> IO ops
-    _X(26, PUSH((DU)key()));                      // KEY
-    _X(27, d_chr((U8)POP()));                     // EMT
-    _X(28, d_chr('\n'));                          // CR
-    _X(29, d_num(POP()); d_chr(' '));             // .
-    _X(30, {});                                   // ."  needs xt, handled in _nest()
-    _X(31, {});                                   // .S  needs xt, handled in _nest()
-    _X(32, POP(); d_str(DIC(POP())));             // TYP
+    CODE(26, PUSH((DU)key()));                      // KEY
+    CODE(27, d_chr((U8)POP()));                     // EMT
+    CODE(28, d_chr('\n'));                          // CR
+    CODE(29, d_num(POP()); d_chr(' '));             // .
+    CODE(30, {});                                   // ."  needs xt, handled in _nest()
+    CODE(31, {});                                   // .S  needs xt, handled in _nest()
+    CODE(32, POP(); d_str(DIC(POP())));             // TYP
     ///> Compiler ops
-    _X(33, trc = POP());                          // TRC
-    _X(34, PUSH(IDX(N4Asm::here)));               // HRE
-    _X(35, RPUSH(POP()));                         // >R
-    _X(36, PUSH(RPOP()));                         // R>
-    _X(37, U8 *p = DIC(POP()); STORE(p, POP()));  // !
-    _X(38, U8 *p = DIC(POP()); PUSH(FETCH(p)) );  // @
-    _X(39, U8 *p = DIC(POP()); *p = (U8)POP() );  // C!
-    _X(40, U8 *p = DIC(POP()); PUSH((DU)*p)  );   // C@
-    _X(41, N4Asm::here += POP());                 // ALO
+    CODE(33, trc = POP());                          // TRC
+    CODE(34, PUSH(IDX(N4Asm::here)));               // HRE
+    CODE(35, RPUSH(POP()));                         // >R
+    CODE(36, PUSH(RPOP()));                         // R>
+    CODE(37, U8 *p = DIC(POP()); STORE(p, POP()));  // !
+    CODE(38, U8 *p = DIC(POP()); PUSH(FETCH(p)) );  // @
+    CODE(39, U8 *p = DIC(POP()); *p = (U8)POP() );  // C!
+    CODE(40, U8 *p = DIC(POP()); PUSH((DU)*p)  );   // C@
+    CODE(41, N4Asm::here += POP());                 // ALO
     ///> Double ops
-    _X(42, _dneg());                              // DNG
-    _X(43, _dminus());                            // D-
-    _X(44, _dplus());                             // D+
-    _X(45, _clock());                             // CLK
+    CODE(42, _dneg());                              // DNG
+    CODE(43, _dminus());                            // D-
+    CODE(44, _dplus());                             // D+
+    CODE(45, _clock());                             // CLK
     ///> Arduino Specific ops
-    _X(46, NanoForth::wait((U32)POP()));          // DLY
-    _X(47, U16 p = POP(); a_out(p, POP()));       // PWM
-    _X(48, U16 p = POP(); d_out(p, POP()));       // OUT
-    _X(49, PUSH(a_in(POP())));                    // AIN
-    _X(50, PUSH(d_in(POP())));                    // IN
-    _X(51, U16 p = POP(); d_pin(p, POP()));       // PIN
-    _X(52, N4Intr::enable_pci(POP()));            // PCE - enable/disable pin change interrupts
-    _X(53, N4Intr::enable_timer(POP()));          // TME - enable/disable timer2 interrupt
-    _X(54, NanoForth::call_api(POP()));           // API
+    CODE(46, NanoForth::wait((U32)POP()));          // DLY
+    CODE(47, U16 p = POP(); a_out(p, POP()));       // PWM
+    CODE(48, U16 p = POP(); d_out(p, POP()));       // OUT
+    CODE(49, PUSH(a_in(POP())));                    // AIN
+    CODE(50, PUSH(d_in(POP())));                    // IN
+    CODE(51, U16 p = POP(); d_pin(p, POP()));       // PIN
+    CODE(52, N4Intr::enable_pci(POP()));            // PCE - enable/disable pin change interrupts
+    CODE(53, N4Intr::enable_timer(POP()));          // TME - enable/disable timer2 interrupt
+    CODE(54, NanoForth::call_api(POP()));           // API
 #if N4_DOES_META
     ///> meta programming (for advance users)
-    _X(55, _nest(POP()));           // EXE  execute a given parameter field
-    _X(56, PUSH(N4Asm::query()));   // '    tick, get parameter field of a word
-    _X(57, {});                     // DO> needs xt, handled in _nest()
-    _X(58, N4Asm::create());        // CRE, create a word (header only)
-    _X(59, N4Asm::comma(POP()));    // ,    comma, add a 16-bit value onto dictionary
-    _X(60, N4Asm::ccomma(POP()));   // C,   C-comma, add a 8-bit value onto dictionary
+    CODE(55, _nest(POP()));           // EXE  execute a given parameter field
+    CODE(56, PUSH(N4Asm::query()));   // '    tick, get parameter field of a word
+    CODE(57, {});                     // DO> needs xt, handled in _nest()
+    CODE(58, N4Asm::create());        // CRE, create a word (header only)
+    CODE(59, N4Asm::comma(POP()));    // ,    comma, add a 16-bit value onto dictionary
+    CODE(60, N4Asm::ccomma(POP()));   // C,   C-comma, add a 8-bit value onto dictionary
 #endif // N4_DOES_META
-    _X(61, RPUSH(POP()));           // 61, FOR
-    _X(62, PUSH(*(vm.rp - 1)));     // 62, I
-    _X(63, {});                     // 63, LIT handled at upper level
+    CODE(61, RPUSH(POP()));           // 61, FOR
+    CODE(62, PUSH(*(vm.rp - 1)));     // 62, I
+    CODE(63, {});                     // 63, LIT handled at upper level
     }
 }
 ///
