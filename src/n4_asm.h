@@ -53,9 +53,9 @@ constexpr U8  OP_NXT   = 0xf0;   ///< 1111 0000
 enum N4_EXT_OP {                 ///< extended opcode (used by for...nxt loop)
     I_NOP  = 0,                  ///< NOP means EXIT
     I_SEM  = 10,                 ///< ; semi-colon
-    I_DQ   = 30,                 ///< ." dot_string
-    I_SQ   = 31,                 ///< S" do_string
-    I_DO   = 57,                 ///< DO>
+    I_DQ   = 31,                 ///< ." dot_string
+    I_SQ   = 32,                 ///< S" do_string
+    I_DO   = 55,                 ///< DO>
     I_I    = 61,                 ///< 61, loop counter
     I_FOR  = 62,                 ///< 62
     I_LIT  = 63                  ///< 63 = 0x3f 3-byte literal
