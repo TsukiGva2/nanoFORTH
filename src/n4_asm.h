@@ -48,6 +48,7 @@ constexpr U8  OP_NXT   = 0xf0;   ///< 1111 0000
 ///@}
 ///
 /// opcodes for loop control (in compiler mode)
+/// Note: sequence in-sync with N4Asm::N4_WORDS, and N4VM::_invoke
 ///
 enum N4_EXT_OP {                 ///< extended opcode (used by for...nxt loop)
     I_NOP  = 0,                  ///< NOP means EXIT
@@ -60,6 +61,13 @@ enum N4_EXT_OP {                 ///< extended opcode (used by for...nxt loop)
     I_LIT  = 63                  ///< 63 = 0x3f 3-byte literal
 };
 constexpr IU LFA_END = 0xffff;   ///< end of link field
+#define XT(a)  ((a) + sizeof(IU) + 3) /** adr + lnk[2] + name[3] */
+/// LFA     NFA     XT=PFA
+/// +-------+-------+--------------------+
+/// |  lnk  | name  | parameters...I_RET |
+/// +-------+-------+--------------------+
+///  \\      \\      \\
+///   16-bits 3-bytes variable length parameters
 ///
 /// Assembler class
 ///
@@ -104,4 +112,5 @@ namespace N4Asm                     // (10-byte header)
         char delim=0                ///< token delimiter
         );
 };  // namespace N4Asm
+
 #endif //__SRC_N4_ASM_H
