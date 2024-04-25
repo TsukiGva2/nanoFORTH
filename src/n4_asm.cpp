@@ -111,9 +111,11 @@ U8 _find(U8 *tkn, IU *adr)
             uc(p[3])==uc(tkn[1]) &&
             (p[3]==' ' || uc(p[4])==uc(tkn[2]))) {
             *adr = IDX(p);
+			printf("found %x ", *adr);
             return 1;
         }
     }
+	printf("NA ");
     return 0;
 }
 ///
@@ -143,7 +145,7 @@ void _add_branch(U8 op)
         JMPSET(RPOP(), here);           // update A2 with current addr
         break;
     case 1: /* ELS */
-        JMPSET(RPOP(), here+2);         // update A1 with next addr
+        JMPSET(RPOP(), here+sizeof(IU));// update A1 with next addr
         RPUSH(IDX(here));               // save current here A2
         JMP00(OP_UDJ);                  // alloc space with jmp_flag
         break;
@@ -152,7 +154,7 @@ void _add_branch(U8 op)
         JMP00(OP_CDJ);                  // alloc addr with jmp_flag
         break;
     case 3: /* RPT */
-        JMPSET(RPOP(), here+2);         // update A2 with next addr
+        JMPSET(RPOP(), here+sizeof(IU));// update A2 with next addr
         JMPTO(RPOP(), OP_UDJ);          // unconditional jump back to A1
         break;
     case 4: /* UTL */
@@ -166,14 +168,14 @@ void _add_branch(U8 op)
         RPUSH(IDX(here));               // save current here A1
         break;
     case 7: /* NXT */
-        RPUSH(IDX(here+1));             // save current addr A1
-        ENC8(here, PRM_OPS | I_FOR);    // encode FOR opcode
+        JMPTO(RPOP(), OP_NXT);          // loop back to A1
         break;
     case 8: /* I */
         ENC8(here, PRM_OPS | I_I);      // fetch loop counter
         break;
     case 9: /* FOR */
-        JMPTO(RPOP(), OP_NXT);          // loop back to A1
+        RPUSH(IDX(here+1));             // save current addr A1
+        ENC8(here, PRM_OPS | I_FOR);    // encode FOR opcode
         break;
     case 10: /* ; */
         ENC8(here, PRM_OPS | I_RET);    // semi colon, mark end of a colon word
@@ -294,14 +296,14 @@ U16 load(U8 autorun)
 ///
 IU reset()
 {
-    here    = dic;                       // rewind to dictionary base
-    last    = DIC(LFA_END);              // root of linked field
-    tab     = 0;
+    here = dic;                          // rewind to dictionary base
+    last = DIC(LFA_END);                 // root of linked field
+    tab  = 0;
     
 #if ARDUINO
-    trc = 0;
+    trc  = 0;
 #else
-    trc = 1;                             // tracing on PC
+    trc  = 1;                            // tracing on PC
 #endif // ARDUINO
 
     return load(1);                      // 1=autorun
@@ -310,12 +312,12 @@ IU reset()
 ///> get address of next input token
 ///
 IU query() {
-    IU adr;                         ///< lfa of word
-    if (!_find(get_token(), &adr)) {/// check if token is in dictionary
-        show("?!  ");               /// * not found, bail
+    IU adr;                              ///< lfa of word
+    if (!_find(get_token(), &adr)) {     /// check if token is in dictionary
+        show("?!  ");                    /// * not found, bail
         return 0;
     }
-    return adr + 2 + 3;             /// * xt = adr + lnk[2] + name[3]
+    return adr + 2 + 3;                  /// * xt = adr + lnk[2] + name[3]
 }
 ///
 ///> parse given token into actionable item
