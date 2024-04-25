@@ -104,7 +104,7 @@ char key()               { return getchar();  }
 void d_chr(char c)       { printf("%c", c);   }
 void d_adr(IU a)         { printf("%03x", a); }
 void d_ptr(U8 *p)        { printf("%p", p);   }
-void d_num(DU n)         { printf(_hex ? "%x" : "%d", n); }
+void d_num(DU n)         { printf(_hex ? "%x" : "%d", _hex ? (U16)n : n); }
 void d_pin(U16 p, U16 v) { /* do nothing */ }
 U16  d_in(U16 p)         { return 0; }
 void d_out(U16 p, U16 v) { /* do nothing */ }
@@ -148,6 +148,7 @@ void d_name(U8 op, const char *lst, U8 space)
 U8 number(U8 *str, DU *num)
 {
     DU  n   = 0;
+    U8  dg  = 0;                                          /// * digits
     U8  c   = *str;
     U8  neg = (c=='-') ? (c=*++str, 1)  : 0;              /// * handle negative sign
     U8  base= c=='$' ? (str++, 16) : (_hex ? 16 : 10);    /// * handle hex number
@@ -161,10 +162,9 @@ U8 number(U8 *str, DU *num)
             if (c < 'A' || c > 'F') return 0;
             n += c - 'A' + 10;
         }
+        dg++;
     }
-    *num = neg ? -n : n;
-
-    return 1;
+    return dg ? (*num = neg ? -n : n, dg) : 0;
 }
 ///
 ///> clear terminal input buffer
