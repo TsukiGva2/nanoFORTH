@@ -527,9 +527,10 @@ IU trace(IU a, U8 ir, char delim)
             d_chr('_'); d_chr(';');
             tab -= tab ? 1 : 0;
             break;
-        case I_DQ: {                                  // ."
+        case I_DQ:                                    // ."
+        case I_SQ: {                                  // S"
             U8 *p = DIC(a)+1;                         // address to string header
-            d_chr('"');
+            d_chr(ir==I_DQ ? '"' : '$');
             d_str(p);                                 // print the string to console
             a += *p;
         } break;
