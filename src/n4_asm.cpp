@@ -448,7 +448,7 @@ void words()
     for (U8 *p=last, *ex=DIC(LFA_END); p!=ex; p=DIC(GETA(p))) {  /// **from last, loop through dictionary**
         d_chr(n++%wrp ? ' ' : '\n');
         if (trc) { d_adr(IDX(p)); d_chr(':'); }                  ///>> optionally show address
-        d_chr(p[2]); d_chr(p[3]); d_chr(p[4]);                   ///>> 3-char name
+        d_name(&p[2]);                                           ///> show word name
     }
     _list_voc(0);   // _list_voc(trc ? n<<1 : n);                ///> list built-in vocabularies
 }
@@ -478,9 +478,9 @@ void see()
     /// word found, walk parameter field
     ///
     U8 *n = DIC(xt - 3);               ///< pointer to word's name
-    d_chr(':'); d_chr(*n++); d_chr(*n++); d_chr(*n); d_chr('\n');
+    d_chr(':'); d_name(n); d_chr('\n');
     for (U8 ir = *DIC(xt); ir != (PRM_OPS|I_NOP); ir = *DIC(xt)) {
-        d_chr(' '); d_chr(' ');
+        show("  ");
         xt = trace(xt, ir, '\n');
     }
     d_adr(xt); show("_; ");
@@ -502,8 +502,7 @@ IU trace(IU a, U8 ir, char delim)
         switch (ir & JMP_MASK) {                      // get branching opcode
         case OP_CALL: {                               // 0xc0 CALL word call
             U8 *p = DIC(w)-3;                         // backtrack 3-byte (name field)
-            d_chr(':');
-            d_chr(*p++); d_chr(*p++); d_chr(*p);
+            d_chr(':'); d_name(p);
             if (!delim) {
                 show("\n....");
                 for (int i=0, n=++tab; i<n; i++) {    // indentation per call-depth
@@ -524,7 +523,7 @@ IU trace(IU a, U8 ir, char delim)
         ir &= PRM_MASK;                               // capture primitive opcode
         switch (ir) {
         case I_NOP:                                   // ; end-of-word
-            d_chr('_'); d_chr(';');
+            show("_;");
             tab -= tab ? 1 : 0;
             break;
         case I_DQ:                                    // ."
