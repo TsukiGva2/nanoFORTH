@@ -130,6 +130,7 @@ void d_mem(U8* base, U8 *p0, IU sz, U8 delim)
 ///
 ///> display the opcode name
 ///
+void d_name(U8 *p) { d_chr(*p); d_chr(*(p+1)); d_chr(*(p+2)); }
 void d_name(U8 op, const char *lst, U8 space)
 {
 #if ARDUINO

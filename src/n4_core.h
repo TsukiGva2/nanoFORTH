@@ -81,7 +81,8 @@ namespace N4Core
         IU sz,                      ///< number of bytes to print<br/>
         U8 delim                    ///< delimiter, ' ' for space, 0 for none
         );
-    void d_name(                    ///< display opcode 3-char name
+    void d_name(U8 *p);             ///< print 3 characters name
+    void d_name(                    ///< display opcode & 3-char name
         U8 op,                      ///< opcode
         const char *lst,            ///< nanoForth string formatted list
         U8 space                    ///< delimiter to append at the end
