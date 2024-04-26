@@ -166,9 +166,11 @@ IU _invoke(U8 op, IU xt=0)
     ///> stack ops
     CODE(0,  xt = RPOP());                          // ___
     CODE(1,  trc = POP());                          // TRC
-    CODE(2,  DU x = SS(2); SS(2) = SS(1); TOS = x); // ROT
+    CODE(2,                                         // ROT
+         DU x = SS(2); SS(2) = SS(1);
+         SS(1)= TOS; TOS = x);
     CODE(3,  PUSH(SS(1)));                          // OVR
-    CODE(4,  DU x = SS(1); SS(1) = TOS;   TOS = x); // SWP
+    CODE(4,  DU x = SS(1); SS(1) = TOS; TOS = x);   // SWP
     CODE(5,  PUSH(TOS));                            // DUP
     CODE(6,  POP());                                // DRP
     ///> Bit-wise ops
