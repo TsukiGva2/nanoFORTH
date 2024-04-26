@@ -108,7 +108,8 @@ namespace N4Asm                     // (10-byte header)
     void comma(DU v);               ///< compile a 16-bit value onto dictionary
     void ccomma(DU v);              ///< compile a 8-it value onto dictionary
     void does(IU xt);               ///< metaprogrammer (jump to definding word DO> section)
-    // dictionary, string list scanners
+    void dot_str();
+    /// dictionary, string list scanners
     IU  query();                    ///< get xt of next input token, 0 if not found
     void words();                   ///< display words in dictionary
     void forget();                  ///< forgets word in the dictionary

@@ -413,6 +413,12 @@ void does(IU xt)  {                        ///> metaprogrammer (jump to defindin
     here += sizeof(IU);                    /// extra 2 bytes due to shift
 #endif // N4_DOES_META
 }
+void dot_str() {
+    U8 *h0 = here;                         ///< keep current HERE
+    _add_str();                            /// * fill string on PAD
+    d_str(h0);                             /// * print the string
+    here = h0;                             /// * restore HERE
+}
 ///
 ///> create a variable on dictionary
 /// * note: 8 or 10-byte per variable
