@@ -201,7 +201,11 @@ IU _invoke(U8 op, IU xt=0)
     CODE(28, d_chr((U8)POP()));                     // EMT
     CODE(29, d_chr('\n'));                          // CR
     CODE(30, d_num(POP()); d_chr(' '));             // .
-    CODE(31, d_str(DIC(xt)); xt += *DIC(xt) + 1);   // ."
+    CODE(31,                                        // ."
+         if (xt) {                                  //   interpreter mode
+             d_str(DIC(xt)); xt += *DIC(xt) + 1;    //   display str
+         }
+         else N4Asm::dot_str());                    //   immediate
     CODE(32,                                        // .S
          PUSH(xt);                                  //   string pointer
          PUSH(*DIC(xt));                            //   strlen
