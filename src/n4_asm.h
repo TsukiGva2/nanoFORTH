@@ -75,8 +75,9 @@ constexpr IU LFA_END = 0xffff;   ///< end of link field
 /// +-------+-------+--------------------+
 /// |  lnk  | name  | parameters...I_RET |
 /// +-------+-------+--------------------+
-///  \\      \\      \\
-///   16-bits 3-bytes variable length parameters
+/// |       |       |
+/// v       v       v
+/// 16-bits 3-bytes variable length parameters
 ///
 /// Assembler class
 ///
