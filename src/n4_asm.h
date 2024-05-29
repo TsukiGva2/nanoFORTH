@@ -26,7 +26,7 @@
 ///   can be disabled if some library needs extra memory 
 ///
 #define N4_DOES_META  1 /**< enable meta programming */
-#define N4_USE_GOTO   1 /**< use computed goto       */
+#define N4_USE_GOTO   0 /**< use computed goto       */
 ///
 /// parser actions enum used by execution and assembler units
 ///
