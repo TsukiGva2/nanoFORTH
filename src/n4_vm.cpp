@@ -235,18 +235,19 @@ IU _invoke(U8 op, IU xt=0)
     CODE(52, N4Intr::enable_pci(POP()));            // PCE - enable/disable pin change interrupts
     CODE(53, N4Intr::enable_timer(POP()));          // TME - enable/disable timer2 interrupt
     CODE(54, NanoForth::call_api(POP()));           // API
+	CODE(55, do{}while(0));                         // NOP
 #if N4_DOES_META
     ///> meta programming (for advance users)
-    CODE(55, N4Asm::does(xt); xt = LFA_END);        // DO>
-    CODE(56, N4Asm::create());          // CRE, create a word (header only)
-    CODE(57, _nest(POP()));             // EXE  execute a given parameter field
-    CODE(58, PUSH(N4Asm::query()));     // '    tick, get parameter field of a word
-    CODE(59, N4Asm::comma(POP()));      // ,    comma, add a 16-bit value onto dictionary
-    CODE(60, N4Asm::ccomma(POP()));     // C,   C-comma, add a 8-bit value onto dictionary
+    CODE(56, N4Asm::does(xt); xt = LFA_END);        // DO>
+    CODE(57, N4Asm::create());          // CRE, create a word (header only)
+    CODE(58, _nest(POP()));             // EXE  execute a given parameter field
+    CODE(59, PUSH(N4Asm::query()));     // '    tick, get parameter field of a word
+    CODE(60, N4Asm::comma(POP()));      // ,    comma, add a 16-bit value onto dictionary
+    CODE(61, N4Asm::ccomma(POP()));     // C,   C-comma, add a 8-bit value onto dictionary
 #endif // N4_DOES_META
-    CODE(61, PUSH(*(vm.rp - 1)));       // I
-    CODE(62, RPUSH(POP()));             // FOR
-    CODE(63,                            // LIT
+    CODE(62, PUSH(*(vm.rp - 1)));       // I
+    CODE(63, RPUSH(POP()));             // FOR
+    CODE(64,                            // LIT
          DU v = FETCH(DIC(xt));         //   fetch the literal
          PUSH(v);                       //   put the value on TOS
          xt += sizeof(DU));             //   skip over the 16-bit literal

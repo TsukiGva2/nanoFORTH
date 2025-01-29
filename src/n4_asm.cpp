@@ -52,7 +52,7 @@ PROGMEM const char JMP[] = "\x0b" \
     "*  " "-  " "+  " "=  " "<  " ">  " "<> " "KEY" "EMT" "CR " \
     ".  " ".\" ""S\" ""TYP" "HRE" ">R " "R> " "!  " "@  " "C! " \
     "C@ " "ALO" "DNG" "D- " "D+ " "CLK" "DLY" "PWM" "OUT" "AIN" \
-    "IN " "PIN" "PCE" "TME" "API"
+    "IN " "PIN" "PCE" "TME" "API" "NOP"
 
 PROGMEM const char PRM[] =
 #if N4_DOES_META
