@@ -31,61 +31,59 @@ using namespace N4Core;                       /// * make utilities available
 /// @brief primitive words (53 of 61 allocated, 3 pre-allocated).
 /// @var PMX
 /// @brief loop control opcodes
-/// Note: Standard Forth
-///   VAL - CONSTANT
-///   DLY - MS
-///   NOT - INVERT
-///   NXT - NEXT, but break at 1
 ///
 ///@{
 PROGMEM const char IMM[] = "\xf"                                \
-    ":  " "VAL" "VAR" "PCI" "TMI" "SEX" "SAV" "LD " "FGT" "DMP" \
-    "SEE" "WRD" "DEC" "HEX" "BYE";
+    ":  " "VAR" "VAL" "PCI" "TMI" "HEX" "DEC" "FGT" "WRD" "DMP" \
+    "SEE" "SAV" "LD " "SEX" "BYE";
     // TODO: "s\" "
 PROGMEM const char JMP[] = "\x0b" \
-    "THN" "ELS" "IF " "RPT" "UTL" "WHL" "BGN" "NXT" "I  " "FOR" \
-    ";  ";
+    ";  " "IF " "ELS" "THN" "BGN" "UTL" "WHL" "RPT" "I  " "FOR" \
+    "NXT";
 
+// NOTE: there is actually a RET (;) but you dont write RET, you write ';'
+// ;-)
 #define N4_WORDS \
-    "   " "TRC" "ROT" "OVR" "SWP" "DUP" "DRP" "LSH" "RSH" "NOT" \
-    "XOR" "OR " "AND" "RND" "MIN" "MAX" "ABS" "MOD" "NEG" "/  " \
-    "*  " "-  " "+  " "=  " "<  " ">  " "<> " "KEY" "EMT" "CR " \
-    ".  " ".\" ""S\" ""TYP" "HRE" ">R " "R> " "!  " "@  " "C! " \
-    "C@ " "ALO" "DNG" "D- " "D+ " "CLK" "DLY" "PWM" "OUT" "AIN" \
-    "IN " "PIN" "PCE" "TME" "API" "NOP"
+    "RET" "DRP" "DUP" "SWP" "OVR" "ROT" "+  " "-  " "*  " "/  " \
+    "MOD" "NEG" "AND" "OR " "XOR" "NOT" "LSH" "RSH" "=  " "<  " \
+    ">  " "<> " "@  " "!  " "C@ " "C! " "KEY" "EMT" "CR " ".  " \
+    ".\" "">R " "R> " "HRE" "RND" "ALO" "TRC" "CLK" "D+ " "D- " \
+    "DNG" "ABS" "MAX" "MIN" "DLY" "IN " "AIN" "OUT" "PWM" "PIN" \
+    "TME" "PCE" "API"
 
 PROGMEM const char PRM[] =
 #if N4_DOES_META
-    "\x3d" N4_WORDS "DO>" "CRE" "EXE" "'  " ",  " "C, ";
+    "\x3b" N4_WORDS "CRE" ",  " "C, " "'  " "EXE" "DO>";
 #else
-    "\x37" N4_WORDS;
+    "\x35" N4_WORDS;
 #endif // N4_DOES_META
 
+PROGMEM const char EXT[] = "\x2" "NOP" "TAG"; // actual NO-OP, usign nop for return makes no sense wtf
 PROGMEM const char PMX[] = "\x2" "I  " "FOR";
 ///@}
 ///
 ///@name Branching
 ///@{
-#define JMP00(j)      ENCA(here, (j)<<8)
-#define JMPTO(idx, f) ENCA(here, (idx) | ((f)<<8))
+#define JMP00(j)      ENC16(here, (j)<<8)
+#define JMPTO(idx, f) ENC16(here, (idx) | ((f)<<8))
 #define JMPSET(idx, p1) do {               \
     U8  *p = DIC(idx);                     \
     U8  f8 = *(p);                         \
-    IU  a  = IDX(p1);                      \
-    ENCA(p, (a | (IU)f8<<8));              \
+    U16 a  = IDX(p1);                      \
+    ENC16(p, (a | (U16)f8<<8));            \
     } while(0)
 ///@}
 ///
 ///@name Stack Ops (note: return stack grows downward)
 ///@{
-#define RPUSH(a)       (*(vm.rp++)=(IU)(a))        /**< push address onto return stack */
+#define RPUSH(a)       (*(vm.rp++)=(U16)(a))       /**< push address onto return stack */
 #define RPOP()         (*(--vm.rp))                /**< pop address from return stack  */
 ///@}
 ///
 ///@name Dictionary Index <=> Pointer Converter
 ///@{
 #define DIC(n)         ((U8*)dic + (n))            /**< convert dictionary index to a memory pointer */
-#define IDX(p)         ((IU)((U8*)(p) - dic))      /**< convert memory pointer to a dictionary index */
+#define IDX(p)         ((U16)((U8*)(p) - dic))     /**< convert memory pointer to a dictionary index */
 ///@}
 constexpr U16 N4_SIG  = (((U16)'N'<<8)+(U16)'4');  ///< EEPROM signature
 constexpr U16 N4_AUTO = N4_SIG | 0x8080;           ///< EEPROM auto-run signature
@@ -104,13 +102,13 @@ U8  tab = 0;                        ///< tracing indentation counter
 ///    1 - token found<br/>
 ///    0 - token not found
 ///
-U8 _find(U8 *tkn, IU *adr)
+U8 _find(U8 *tkn, U16 *adr)
 {
-    for (U8 *p=last, *ex=DIC(LFA_END); p!=ex; p=DIC(GETA(p))) {
+    for (U8 *p=last, *ex=DIC(LFA_END); p!=ex; p=DIC(GET16(p))) {
         if (uc(p[2])==uc(tkn[0]) &&
             uc(p[3])==uc(tkn[1]) &&
             (p[3]==' ' || uc(p[4])==uc(tkn[2]))) {
-            *adr = IDX(p);         /// * return offset of dic
+            *adr = IDX(p);
             return 1;
         }
     }
@@ -121,13 +119,11 @@ U8 _find(U8 *tkn, IU *adr)
 ///
 void _add_word()
 {
-    U8 *tkn = get_token();          ///#### fetch one token from console
-    IU tmp;                         // link to previous word
-    if (_find(tkn, &tmp)) show("reDef?\n");
-    
-    tmp  = IDX(last);
+    U8  *tkn = get_token();         ///#### fetch one token from console
+    U16 tmp  = IDX(last);           // link to previous word
+
     last = here;                    ///#### create 3-byte name field
-    ENCA(here, tmp);                // lfa: pointer to previous word
+    ENC16(here, tmp);               // lfa: pointer to previous word
     ENC8(here, tkn[0]);             // nfa: store token into 3-byte name field
     ENC8(here, tkn[1]);
     ENC8(here, tkn[1]!=' ' ? tkn[2] : ' ');
@@ -141,34 +137,34 @@ void _add_word()
 void _add_branch(U8 op)
 {
     switch (op) {
-    case 0: /* THN */
-        JMPSET(RPOP(), here);           // update A2 with current addr
+    case 0: /* ; */
+        ENC8(here, PRM_OPS | I_RET);    // semi colon, mark end of a colon word
         break;
-    case 1: /* ELS */
-        JMPSET(RPOP(), here+sizeof(IU));// update A1 with next addr
-        RPUSH(IDX(here));               // save current here A2
-        JMP00(OP_UDJ);                  // alloc space with jmp_flag
-        break;
-    case 2: /* IF */
+    case 1: /* IF */
         RPUSH(IDX(here));               // save current here A1
         JMP00(OP_CDJ);                  // alloc addr with jmp_flag
         break;
-    case 3: /* RPT */
-        JMPSET(RPOP(), here+sizeof(IU));// update A2 with next addr
-        JMPTO(RPOP(), OP_UDJ);          // unconditional jump back to A1
+    case 2: /* ELS */
+        JMPSET(RPOP(), here+2);         // update A1 with next addr
+        RPUSH(IDX(here));               // save current here A2
+        JMP00(OP_UDJ);                  // alloc space with jmp_flag
         break;
-    case 4: /* UTL */
+    case 3: /* THN */
+        JMPSET(RPOP(), here);           // update A2 with current addr
+        break;
+    case 4: /* BGN */
+        RPUSH(IDX(here));               // save current here A1
+        break;
+    case 5: /* UTL */
         JMPTO(RPOP(), OP_CDJ);          // conditional jump back to A1
         break;
-    case 5: /* WHL */
+    case 6: /* WHL */
         RPUSH(IDX(here));               // save WHILE addr A2
         JMP00(OP_CDJ);                  // allocate branch addr A2 with jmp flag
         break;
-    case 6: /* BGN */
-        RPUSH(IDX(here));               // save current here A1
-        break;
-    case 7: /* NXT */
-        JMPTO(RPOP(), OP_NXT);          // loop back to A1
+    case 7: /* RPT */
+        JMPSET(RPOP(), here+2);         // update A2 with next addr
+        JMPTO(RPOP(), OP_UDJ);          // unconditional jump back to A1
         break;
     case 8: /* I */
         ENC8(here, PRM_OPS | I_I);      // fetch loop counter
@@ -177,8 +173,8 @@ void _add_branch(U8 op)
         RPUSH(IDX(here+1));             // save current addr A1
         ENC8(here, PRM_OPS | I_FOR);    // encode FOR opcode
         break;
-    case 10: /* ; */
-        ENC8(here, PRM_OPS | I_NOP);    // semi colon, mark end of a colon word
+    case 10: /* NXT */
+        JMPTO(RPOP(), OP_NXT);          // loop back to A1
         break;
     }
 }
@@ -216,11 +212,11 @@ void _list_voc(U16 n)
 ///
 void save(U8 autorun)
 {
-    IU here_i = IDX(here);
+    U16 here_i = IDX(here);
 
     if (trc) show("dic>>ROM ");
 
-    IU last_i = IDX(last);
+    U16 last_i = IDX(last);
     ///
     /// verify EEPROM capacity to hold user dictionary
     ///
@@ -259,7 +255,7 @@ U16 load(U8 autorun)
     ///
     /// validate EEPROM contains user dictionary (from previous run)
     ///
-    U16 n4 = ((U16)EEPROM.read(0)<<8) | EEPROM.read(1);
+    U16 n4 = ((U16)EEPROM.read(0)<<8) + EEPROM.read(1);
     if (autorun) {
         if (n4 != N4_AUTO) return LFA_END;          // EEPROM is not set to autorun
     }
@@ -267,8 +263,8 @@ U16 load(U8 autorun)
     ///
     /// retrieve metadata (sizes) of user dictionary
     ///
-    IU last_i = ((IU)EEPROM.read(2)<<8) | EEPROM.read(3);
-    IU here_i = ((IU)EEPROM.read(4)<<8) | EEPROM.read(5);
+    U16 last_i = ((U16)EEPROM.read(2)<<8) + EEPROM.read(3);
+    U16 here_i = ((U16)EEPROM.read(4)<<8) + EEPROM.read(5);
     ///
     /// retrieve user dictionary byte-by-byte into memory
     ///
@@ -294,16 +290,16 @@ U16 load(U8 autorun)
 ///  1: autorun last word from EEPROM
 ///  0: clean start
 ///
-IU reset()
+U16 reset()
 {
-    here = dic;                          // rewind to dictionary base
-    last = DIC(LFA_END);                 // root of linked field
-    tab  = 0;
+    here    = dic;                       // rewind to dictionary base
+    last    = DIC(LFA_END);              // root of linked field
+    tab     = 0;
     
 #if ARDUINO
-    trc  = 0;
+    trc = 0;
 #else
-    trc  = 1;                            // tracing on PC
+    trc = 1;                             // tracing on PC
 #endif // ARDUINO
 
     return load(1);                      // 1=autorun
@@ -311,29 +307,31 @@ IU reset()
 ///
 ///> get address of next input token
 ///
-IU query() {
-    IU adr;                              ///< lfa of word
-    if (!_find(get_token(), &adr)) {     /// check if token is in dictionary
-        show("?!  ");                    /// * not found, bail
+U16 query() {
+    U16 adr;                        ///< lfa of word
+    if (!_find(get_token(), &adr)) {/// check if token is in dictionary
+        show("?!  ");               /// * not found, bail
         return 0;
     }
-    return XT(adr);                      /// * xt = adr + lnk[2] + name[3]
+    return adr + 2 + 3;             /// * xt = adr + lnk[2] + name[3]
 }
+
 ///
 ///> parse given token into actionable item
 ///
-N4OP parse(U8 *tkn, IU *rst, U8 run)
+N4OP parse(U8 *tkn, U16 *rst, U8 run)
 {
     if (_find(tkn, rst))                 return TKN_WRD; /// * WRD - is a colon word? [lnk(2),name(3)]
     if (scan(tkn, run ? IMM : JMP, rst)) return TKN_IMM; /// * IMM - is a immediate word?
-    if (scan(tkn, PRM, rst))             return TKN_PRM; /// * PRM - is a primitives?
-    if (number(tkn, (DU*)rst))           return TKN_NUM; /// * NUM - is a number literal?
+    if (scan(tkn, PRM, rst))             return TKN_PRM; /// * PRM - is a primitive?
+    if (scan(tkn, EXT, rst))             return TKN_EXTRA; /// * PRM - is an extra primitive?
+    if (number(tkn, (S16*)rst))          return TKN_NUM; /// * NUM - is a number literal?
     return TKN_ERR;                                      /// * ERR - unknown token
 }
 ///
 ///> Forth assembler (creates word onto dictionary)
 ///
-void compile(IU *rp0)
+void compile(U16 *rp0)
 {
     vm.rp = rp0;                       // set return stack pointer
     U8 *l0 = last, *h0 = here;
@@ -342,7 +340,7 @@ void compile(IU *rp0)
     _add_word();                    /// **fetch token, create name field linked to previous word**
 
     for (U8 *tkn=p0; tkn;) {        ///> loop til exhaust all tokens (tkn==NULL)
-        IU tmp;
+        U16 tmp;
         if (trc) d_mem(dic, p0, (U16)(here-p0), 0);  ///>> trace assembler progress if enabled
 
         tkn = get_token();
@@ -350,19 +348,22 @@ void compile(IU *rp0)
         switch(parse(tkn, &tmp, 0)) {       ///>> **determine type of operation, and keep opcode in tmp**
         case TKN_IMM:                       ///>> an immediate command?
             _add_branch(tmp);               /// * add branching opcode
-            if (tmp==I_SEM) {               /// * semi-colon i.e. end of word
+            if (tmp==I_RET) {
                 tkn = NULL;                 /// * clear token to exit compile mode
-                if (trc) d_mem(dic, last, (IU)(here-last), ' ');  ///> debug memory dump, if enabled
+                if (trc) d_mem(dic, last, (U16)(here-last), ' ');  ///> debug memory dump, if enabled
             }
             break;
         case TKN_WRD:                       ///>> a colon word? [addr + lnk(2) + name(3)]
-            JMPTO(XT(tmp), OP_CALL);        /// * call subroutine
+            JMPTO(tmp+2+3, OP_CALL);        /// * call subroutine
             break;
         case TKN_PRM:                       ///>> a built-in primitives?
             ENC8(here, PRM_OPS | (U8)tmp);  /// * add found primitive opcode
-            if (tmp==I_DQ || tmp==I_SQ) {   /// * do extra, if it's a ." (dot_string) or S" (do_string) command
-                _add_str();
-            }
+            if (tmp==I_DQ) _add_str();      /// * do extra, if it's a ." (dot_string) command
+            break;
+        case TKN_EXTRA:                     ///>> we only have 2 extra words!
+            tmp += I_EXTRA;
+            ENC8(here, PRM_OPS | (U8)tmp);
+            if (tmp==I_TAG) RPUSH(p0-dic);
             break;
         case TKN_NUM:                       ///>> a literal (number)?
             if (tmp < 128) {
@@ -370,7 +371,7 @@ void compile(IU *rp0)
             }
             else {
                 ENC8(here, PRM_OPS | I_LIT);/// * 3-byte literal
-                STORE(here, tmp);
+                ENC16(here, tmp);
             }
             break;
         case TKN_EXT:                       ///>> extended words, not implemented yet
@@ -388,36 +389,29 @@ void compile(IU *rp0)
 ///
 void create() {                             ///> create a word header (link + name field)
     _add_word();                            /// **fetch token, create name field linked to previous word**
-    IU tmp = IDX(here + sizeof(IU));        ///< address to variable storage
-    if (tmp < 128) {                        ///> 1-byte literal
+
+    U8 tmp = IDX(here+2);                   // address to variable storage
+    if (tmp < 128) {                        ///> handle 1-byte address + RET(1)
         ENC8(here, (U8)tmp);
     }
     else {
-        tmp += sizeof(DU);                  ///> or, 3-byte literal
+        tmp += 2;                           ///> or, extra bytes for 16-bit address
         ENC8(here, PRM_OPS | I_LIT);
-        ENCA(here, tmp);
+        ENC16(here, tmp);
     }
-    ENC8(here, PRM_OPS | I_NOP);
+    ENC8(here, PRM_OPS | I_RET);
 }
-void comma(DU v)  { STORE(here, v); }      ///> compile a 16-bit value onto dictionary
-void ccomma(DU v) { ENC8(here, v);  }      ///> compile a 16-bit value onto dictionary
-void does(IU xt)  {                        ///> metaprogrammer (jump to definding word DO> section)
+void comma(S16 v)  { ENC16(here, v); }      ///> compile a 16-bit value onto dictionary
+void ccomma(S16 v) { ENC8(here, v);  }      ///> compile a 16-bit value onto dictionary
+void does(U16 xt)  {                        ///> metaprogrammer (jump to definding word DO> section)
 #if N4_DOES_META
-    U8 *p = here - 1;                      /// start walking back
-    for (; *p!=(PRM_OPS|I_NOP); p--) {     /// shift down parameters by 2 bytes
-        *(p+sizeof(DU)) = *p;
-    }
-    *(p-1) += sizeof(IU);                  /// adjust the PFA
-    ENCA(p, xt | (OP_UDJ << 8));           /// replace NOP with a JMP,
-    ENC8(p, PRM_OPS|I_NOP);                /// and a NOP, (not necessary but nice to SEE)
-    here += sizeof(IU);                    /// extra 2 bytes due to shift
+	U8 *p = here - 1;                               /// start walking back
+    for (; *p!=(PRM_OPS|I_RET); p--) *(p+2) = *p;   /// shift down parameters by 2 bytes
+    *(p-1) += 2;                                    /// adjust the PFA
+    ENC16(p, xt | (OP_UDJ << 8));                   /// replace RET with a JMP,
+	ENC8(p, PRM_OPS|I_RET);                         /// and a RET, (not necessary but nice to SEE)
+	here += 2;                                      /// extra 2 bytes due to shift
 #endif // N4_DOES_META
-}
-void dot_str() {
-    U8 *h0 = here;                         ///< keep current HERE
-    _add_str();                            /// * fill string on PAD
-    d_str(h0);                             /// * print the string
-    here = h0;                             /// * restore HERE
 }
 ///
 ///> create a variable on dictionary
@@ -426,23 +420,24 @@ void dot_str() {
 void variable()
 {
     create();
-    STORE(here, 0);                         /// add actual literal storage area
+    ENC16(here, 0);                         /// add actual literal storage area
 }
 ///
 ///> create a constant on dictionary
 /// * note: 8 or 10-byte per variable
 ///
-void constant(DU v)
+void constant(S16 v)
 {
     _add_word();                            /// **fetch token, create name field linked to previous word**
+
     if (v < 128) {                          ///> handle 1-byte constant
         ENC8(here, (U8)v);
     }
     else {
         ENC8(here, PRM_OPS | I_LIT);        ///> or, constant stored as 3-byte literal 
-        STORE(here, v);
+        ENC16(here, v);
     }
-    ENC8(here, PRM_OPS | I_NOP);
+    ENC8(here, PRM_OPS | I_RET);
 }
 ///
 ///> display words in dictionary
@@ -451,25 +446,26 @@ void words()
 {
     U8  wrp = WORDS_PER_ROW >> (trc ? 1 : 0);                    ///> wraping width
     U16 n   = 0;
-    for (U8 *p=last, *ex=DIC(LFA_END); p!=ex; p=DIC(GETA(p))) {  /// **from last, loop through dictionary**
+    for (U8 *p=last, *ex=DIC(LFA_END); p!=ex; p=DIC(GET16(p))) { /// **from last, loop through dictionary**
         d_chr(n++%wrp ? ' ' : '\n');
         if (trc) { d_adr(IDX(p)); d_chr(':'); }                  ///>> optionally show address
-        d_name(&p[2]);                                           ///> show word name
+        d_chr(p[2]); d_chr(p[3]); d_chr(p[4]);                   ///>> 3-char name
     }
-    _list_voc(0);   // _list_voc(trc ? n<<1 : n);                ///> list built-in vocabularies
+    _list_voc(trc ? n<<1 : n);                                   ///> list built-in vocabularies
+    d_chr(' ');
 }
 ///
 ///> drop words from the dictionary
 ///
 void forget()
 {
-    IU xt = query();                   ///< cfa of word
+    U16 xt = query();                  ///< cfa of word
     if (!xt) return;                   /// * bail if word not found
     ///
     /// word found, rollback here
     ///
-    U8 *lfa = DIC(xt - sizeof(IU) - 3);///< pointer to word's link
-    last    = DIC(GETA(lfa));          /// * reset last word address
+    U8 *lfa = DIC(xt - 2 - 3);         ///< pointer to word's link
+    last    = DIC(GET16(lfa));         /// * reset last word address
     here    = lfa;                     /// * reset current pointer
 }
 ///
@@ -477,43 +473,37 @@ void forget()
 ///
 void see()
 {
-#if TRC_LEVEL > 0    
-    IU xt = query();                   ///< cfa of word
-    if (!xt) return;                   /// * not found in colon words
+    U16 xt = query();                  ///< cfa of word
+    if (!xt) return;                   /// * bail if word not found
     ///
     /// word found, walk parameter field
     ///
-    U8 *n = DIC(xt - 3);               ///< pointer to word's name
-    d_chr(':'); d_name(n); d_chr('\n');
-    for (U8 ir = *DIC(xt); ir != (PRM_OPS|I_NOP); ir = *DIC(xt)) {
-        show("  ");
+    d_chr('\n');
+    for (U8 ir = *DIC(xt); ir != (PRM_OPS|I_RET); ir = *DIC(xt)) {
         xt = trace(xt, ir, '\n');
     }
     d_adr(xt); show("_; ");
-#else  // !TRC_LEVEL > 0
-    show("NA");   
-#endif // TRC_LEVEL > 0    
 }
 ///
 ///> execution tracer (debugger, can be modified into single-stepper)
 ///
-IU trace(IU a, U8 ir, char delim)
+U16 trace(U16 a, U8 ir, char delim)
 {
-#if TRC_LEVEL > 0
     d_adr(a);                                         // opcode address
-    
+
     switch (ir & CTL_BITS) {
     case JMP_OPS: {                                   ///> is a jump instruction?
-        IU w = GETA(DIC(a)) & ADR_MASK;               // target address
+        U16 w = GET16(DIC(a)) & ADR_MASK;             // target address
         switch (ir & JMP_MASK) {                      // get branching opcode
         case OP_CALL: {                               // 0xc0 CALL word call
             U8 *p = DIC(w)-3;                         // backtrack 3-byte (name field)
-            d_chr(':'); d_name(p);
+            d_chr(':');
+            d_chr(*p++); d_chr(*p++); d_chr(*p);
             if (!delim) {
-                show("\n....");
-                for (int i=0, n=++tab; i<n; i++) {    // indentation per call-depth
-                    show("  ");
-                }
+	            show("\n....");
+    	        for (int i=0, n=++tab; i<n; i++) {    // indentation per call-depth
+        	        show("  ");
+	            }
             }
         } break;
         case OP_CDJ: d_chr('?'); d_adr(w); break;     // 0xd0 CDJ  conditional jump
@@ -526,44 +516,37 @@ IU trace(IU a, U8 ir, char delim)
         a+=2;                                         // skip over address
     } break;
     case PRM_OPS: {                                   ///> is a primitive?
-        ir &= PRM_MASK;                               // capture primitive opcode
+    	ir &= PRM_MASK;                               // capture primitive opcode
         switch (ir) {
-        case I_NOP:                                   // ; end-of-word
-            show("_;");
+        case I_RET:
+        	d_chr('_'); d_chr(';');
             tab -= tab ? 1 : 0;
-            break;
-        case I_DQ:                                    // ."
-        case I_SQ: {                                  // S"
-            U8 *p = DIC(a)+1;                         // address to string header
-            d_chr(ir==I_DQ ? '"' : '$');
-            d_str(p);                                 // print the string to console
-            a += *p;
-        } break;
-        case I_I:
-        case I_FOR:
-            d_chr('_');
-            d_name(ir-I_I, PMX, 0);
             break;
         case I_LIT: {                                 // 3-byte literal (i.e. 16-bit signed integer)
             U8 *p = DIC(a)+1;                         // address to the 16-bit number
-            DU w  = FETCH(p);                         // fetch the number
+            S16 w = GET16(p);                         // fetch the number
             d_chr('#');
             d_num(w);
             a += 2;                                   // skip literal
         } break;
-        default:                                      // all other opcodes
+        case I_DQ: {                                  // print string
+            U8 *p = DIC(a)+1;                         // address to string header
+            d_chr('"');
+            d_str(p);                                 // print the string to console
+            a += *p;
+        } break;
+        default:                                      // other opcodes
             d_chr('_');
-            d_name(ir, PRM, 0);                       // display primitive words
+            U8 ci = ir >= I_I;                        // loop controller flag
+            d_name(ci ? ir-I_I : ir, ci ? PMX : PRM, 0);
         }
         a++;
     } break;
     default:                                          ///> and a number (i.e. 1-byte literal)
-        d_chr('#'); d_num((DU)ir);
+        d_chr('#'); d_num((S16)ir);
         a++;           
     }
     d_chr(delim ? delim : ' ');
-    
-#endif // TRC_LEVEL > 0    
     return a;
 }
 

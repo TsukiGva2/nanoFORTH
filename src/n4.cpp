@@ -6,13 +6,13 @@
  */
 #include "n4_vm.h"
 
-FPTR NanoForth::api[] = { NULL };
+FPTR NanoForth::fp[] = { NULL };
 ///
 ///> add new (user defined) hardware task to linked-list
 ///
-void NanoForth::add_api(U16 i, FPTR ufunc)
+void NanoForth::add_api(int i, FPTR ufunc)
 {
-	if (i <= N4_API_SZ) api[i] = ufunc;
+	if (i <= N4_API_SZ) fp[i] = ufunc;
 }
 ///
 ///> n4 VM init proxy
@@ -32,7 +32,7 @@ void NanoForth::exec()
 
 void NanoForth::call_api(U16 id)
 {
-	if (id < N4_API_SZ && api[id]) api[id]();
+	if (id < N4_API_SZ && fp[id]) fp[id]();
 }
 ///
 ///> n4 yield, execute one round of user hardware tasks
@@ -90,14 +90,8 @@ int main(int argc, char **argv)
 }
 #endif // !ARDUINO
 /*
- * Revision History [code size,ms/10K]
+ * Revision History
  * -----------------
- *> 2024-04-13: chochain@yahoo.com - v2.2
- *    [14526,138] add N4Task, IsrRec to reduce intr service time (11ms)
- *                segment/reorg opcodes for better display
- *                add word creating words CRE..DO> ' EXE C, and ,
- *                add SEE (and trace)
- *
  *> 2023-05-05: chochain@yahoo.com - v2.1
  *    [13986,139] tune inner loop, isr - (30% faster)
  *                add computed goto 
